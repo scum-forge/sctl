@@ -1,0 +1,27 @@
+{
+	"name": "@snowyyd/typescript-template",
+	"description": "A TypeScript project template",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"main": "dist/main.js",
+	"homepage": "https://github.com/snowyyd/typescript-template#readme",
+	"repository": "https://github.com/snowyyd/typescript-template.git",
+	"bugs": "https://github.com/snowyyd/typescript-template/issues",
+	"author": "snowyyd <snowyyd@proton.me>",
+	"license": "MIT",
+	"scripts": {
+		"lint": "eslint src/ eslint.config.mjs",
+		"build": "tsc -p tsconfig.build.json",
+		"dev": "tsx src/main.ts",
+		"dev:node": "node src/main.ts"
+	},
+	"devDependencies": {
+		"@snowyyd/eslint-config": "^2.2.2",
+		"@types/node": "^24.0.13",
+		"eslint": "^9.30.1",
+		"tsx": "^4.20.3",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "^8.36.0"
+	}
+}
