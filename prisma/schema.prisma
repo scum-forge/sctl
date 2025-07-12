@@ -1,0 +1,2190 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  // runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model abandoned_bunker {
+  id                                                 Int                                                  @id @default(autoincrement())
+  user_profile_id                                    Int?
+  map_id                                             Int
+  location_x                                         Int
+  location_y                                         Int
+  is_day                                             Int
+  time_since_previous_activation_end                 Float                                                @default(0.0)
+  time_until_activation_start                        Float                                                @default(0.0)
+  time_until_keycard_override_activation_end         Float                                                @default(0.0)
+  map                                                map                                                  @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                                       user_profile?                                        @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  abandoned_bunker_alarmed_room                      abandoned_bunker_alarmed_room[]                      @ignore
+  abandoned_bunker_bcu_terminal                      abandoned_bunker_bcu_terminal[]
+  abandoned_bunker_mesh_instance_bound_to_activation abandoned_bunker_mesh_instance_bound_to_activation[]
+  abandoned_bunker_powered_room                      abandoned_bunker_powered_room[]                      @ignore
+  abandoned_bunker_switchboard_fuse                  abandoned_bunker_switchboard_fuse[]                  @ignore
+
+  @@index([user_profile_id, map_id], map: "index_on_abandoned_bunker_for_user_profile_id_and_map_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model abandoned_bunker_alarmed_room {
+  room_name            String
+  bunker_id            Int
+  alarm_time_remaining Float
+  abandoned_bunker     abandoned_bunker @relation(fields: [bunker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([bunker_id], map: "index_on_abandoned_bunker_alarmed_room_for_bunker_id")
+  @@ignore
+}
+
+model abandoned_bunker_bcu_terminal {
+  room_name          String
+  bunker_id          Int
+  last_download_time Float
+  abandoned_bunker   abandoned_bunker @relation(fields: [bunker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([room_name, bunker_id], map: "sqlite_autoindex_abandoned_bunker_bcu_terminal_1")
+  @@index([bunker_id], map: "index_on_abandoned_bunker_bcu_terminal_for_bunker_id")
+}
+
+model abandoned_bunker_mesh_instance_bound_to_activation {
+  abandoned_bunker_id Int
+  mesh_instance_name  String
+  examine_time        Float
+  abandoned_bunker    abandoned_bunker @relation(fields: [abandoned_bunker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([abandoned_bunker_id, mesh_instance_name])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model abandoned_bunker_powered_room {
+  room_name        String
+  bunker_id        Int
+  abandoned_bunker abandoned_bunker @relation(fields: [bunker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([bunker_id], map: "index_on_abandoned_bunker_powered_room_for_bunker_id")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model abandoned_bunker_switchboard_fuse {
+  room_name        String
+  bunker_id        Int
+  fuse_id          Int
+  entity           entity           @relation(fields: [fuse_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  abandoned_bunker abandoned_bunker @relation(fields: [bunker_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([fuse_id], map: "index_on_abandoned_bunker_switchboard_fuse_for_fuse_id")
+  @@index([bunker_id, room_name], map: "index_on_abandoned_bunker_switchboard_fuse_for_bunker_id_and_room_name")
+  @@ignore
+}
+
+model active_quest {
+  id                    Int               @id @default(autoincrement())
+  user_profile_id       Int?
+  map_id                Int
+  quest_data_asset_path String
+  auto_complete         Boolean
+  completion_deadline   Float
+  sector                String
+  quest_giver_type      Int
+  rewards_index         Int
+  map                   map               @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile          user_profile?     @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tracking_data_set     tracking_data_set @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_active_quest_for_user_profile_id_and_map_id")
+}
+
+model active_task {
+  id                Int               @id @default(autoincrement())
+  user_profile_id   Int?
+  map_id            Int
+  available_task_id Int
+  map               map               @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile      user_profile?     @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  available_task    available_task    @relation(fields: [available_task_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tracking_data_set tracking_data_set @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_active_task_for_user_profile_id_and_map_id")
+  @@index([available_task_id], map: "index_on_active_task_for_available_task_id")
+}
+
+model available_task {
+  id                   Int           @id @default(autoincrement())
+  user_profile_id      Int?
+  map_id               Int
+  task_data_asset_path String
+  was_ever_completed   Boolean
+  active_task          active_task[]
+  map                  map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile         user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id, task_data_asset_path], map: "sqlite_autoindex_available_task_1")
+}
+
+model bank_account_registry {
+  id                                                                             Int                                @id @default(autoincrement())
+  map_id                                                                         Int?
+  user_profile_id                                                                Int?
+  account_owner_user_profile_id                                                  Int
+  bank_account_number                                                            Int
+  save_timestamp                                                                 Int?
+  used_digital_deluxe_privileges                                                 Boolean?                           @default(false)
+  user_profile_bank_account_registry_account_owner_user_profile_idTouser_profile user_profile                       @relation("bank_account_registry_account_owner_user_profile_idTouser_profile", fields: [account_owner_user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile_bank_account_registry_user_profile_idTouser_profile               user_profile?                      @relation("bank_account_registry_user_profile_idTouser_profile", fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                                                                            map?                               @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  bank_account_registry_cards                                                    bank_account_registry_cards[]
+  bank_account_registry_currencies                                               bank_account_registry_currencies[]
+
+  @@index([user_profile_id, map_id, bank_account_number], map: "index_on_bank_account_registry_for_user_profile_id_and_map_id_and_bank_account_number")
+  @@index([user_profile_id, map_id, account_owner_user_profile_id], map: "index_on_bank_account_registry_for_user_profile_id_and_map_id_and_account_owner_user_profile_id")
+  @@index([account_owner_user_profile_id], map: "index_on_bank_account_registry_for_account_owner_user_profile_id")
+}
+
+model bank_account_registry_cards {
+  id                              Int                   @id @default(autoincrement())
+  map_id                          Int?
+  user_profile_id                 Int?
+  bank_account_id                 Int
+  card_type                       String?
+  pin_number                      Int?
+  wrong_pins_remaining            Int?
+  free_renewals_remaining         Int?
+  daily_withdraw_amount_remaining Int?
+  daily_deposit_amount_remaining  Int?
+  card_entity_id                  Int?
+  bank_account_registry           bank_account_registry @relation(fields: [bank_account_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                    user_profile?         @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                             map?                  @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity                          entity?               @relation(fields: [card_entity_id], references: [id], onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, bank_account_id, card_type], map: "index_on_bank_account_registry_cards_for_user_profile_id_and_map_id_and_bank_account_id_and_card_type")
+  @@index([card_entity_id], map: "index_on_bank_account_registry_cards_for_card_entity_id")
+  @@index([bank_account_id, card_type], map: "index_on_bank_account_registry_cards_for_bank_account_id_and_card_type")
+}
+
+model bank_account_registry_currencies {
+  id                    Int                   @id @default(autoincrement())
+  map_id                Int?
+  user_profile_id       Int?
+  bank_account_id       Int
+  currency_type         Int
+  account_balance       Int?
+  bank_account_registry bank_account_registry @relation(fields: [bank_account_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile          user_profile?         @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                   map?                  @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, bank_account_id, currency_type], map: "index_on_bank_account_registry_currencies_for_user_profile_id_and_map_id_and_bank_account_id_and_currency_type")
+  @@index([bank_account_id, currency_type], map: "index_on_bank_account_registry_currencies_for_bank_account_id_and_currency_type")
+}
+
+model bank_general_data {
+  id                                               Int           @id @default(autoincrement())
+  map_id                                           Int?
+  user_profile_id                                  Int?
+  last_generated_final_set_of_bank_account_numbers Int?          @default(0)
+  last_withdrawn_amount_reset_timestamp            Int?          @default(0)
+  user_profile                                     user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                                              map?          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_bank_general_data_for_user_profile_id_and_map_id")
+}
+
+model base {
+  id                    Int                 @id @default(autoincrement())
+  location_x            Float?
+  location_y            Float?
+  size_x                Decimal?
+  size_y                Float?
+  name                  String?
+  map_id                Int?
+  user_profile_id       Int?
+  owner_user_profile_id Int?
+  is_owned_by_player    Int?
+  bounds_min_x          Float?
+  bounds_min_y          Float?
+  bounds_max_x          Float?
+  bounds_max_y          Float?
+  user_profile          user_profile?       @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                   map?                @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  base_element          base_element[]
+  chest_acquisition     chest_acquisition[]
+
+  @@index([user_profile_id, map_id], map: "index_on_base_for_user_profile_id_and_map_id")
+}
+
+model base_element {
+  element_id               Int                        @id @default(autoincrement())
+  base_id                  Int
+  location_x               Float?
+  location_y               Float?
+  location_z               Float?
+  rotation_pitch           Float?
+  rotation_yaw             Float?
+  rotation_roll            Float?
+  scale_x                  Float?
+  scale_y                  Float?
+  scale_z                  Float?
+  asset                    String?
+  element_health           Decimal?
+  owner_profile_id         Int?
+  quality                  Float?                     @default(1.0)
+  creator_prisoner_id      Int?
+  user_profile             user_profile?              @relation(fields: [owner_profile_id], references: [id], onUpdate: NoAction)
+  base                     base                       @relation(fields: [base_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  base_element_coloring    base_element_coloring[]    @ignore
+  base_element_flag        base_element_flag[]        @ignore
+  base_element_item        base_element_item[]        @ignore
+  base_element_shelter_map base_element_shelter_map[]
+
+  @@index([owner_profile_id], map: "index_on_base_element_for_owner_profile_id")
+  @@index([base_id], map: "index_on_base_element_for_base_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model base_element_coloring {
+  element_id          Int?
+  element_part_index  Int
+  element_color_index Int
+  base_element        base_element? @relation(fields: [element_id], references: [element_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([element_id, element_part_index])
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model base_element_flag {
+  element_id                Int?
+  overtake_end_time         Int?
+  overtaker_user_profile_id Int?
+  expanded_elements         Int?
+  user_profile              user_profile? @relation(fields: [overtaker_user_profile_id], references: [id], onUpdate: NoAction)
+  base_element              base_element? @relation(fields: [element_id], references: [element_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([overtaker_user_profile_id], map: "index_on_base_element_flag_on_overtaker_user_profile_id")
+  @@index([element_id], map: "index_on_base_element_flag_for_element_id")
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model base_element_item {
+  element_id     Int?
+  item_entity_id Int?
+  entity         entity?       @relation(fields: [item_entity_id], references: [id], onUpdate: NoAction)
+  base_element   base_element? @relation(fields: [element_id], references: [element_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([element_id, item_entity_id])
+  @@index([item_entity_id], map: "index_on_base_element_item_for_item_entity_id")
+  @@ignore
+}
+
+model base_element_shelter_map {
+  element_id   Int
+  shelter_id   Int
+  shelter      shelter      @relation(fields: [shelter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  base_element base_element @relation(fields: [element_id], references: [element_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([element_id, shelter_id])
+  @@index([shelter_id], map: "index_on_base_element_shelter_map_for_shelter_id")
+}
+
+model base_raid_protection {
+  id                           Int                          @id @default(autoincrement())
+  manager_id                   Int
+  base_flag_id                 Int?
+  data                         Bytes?
+  base_raid_protection_manager base_raid_protection_manager @relation(fields: [manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([manager_id], map: "index_on_base_raid_protection_for_manager_id")
+}
+
+model base_raid_protection_manager {
+  id                   Int                     @id @default(autoincrement())
+  map_id               Int
+  user_profile_id      Int?
+  protection_type      Unsupported("tinyint")?
+  base_raid_protection base_raid_protection[]
+  user_profile         user_profile?           @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                  map                     @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id], map: "index_on_base_raid_protection_manager_for_user_profile_id")
+}
+
+model bcu_lock_registry {
+  map_id                                                              Int
+  user_profile_id                                                     Int?
+  server_user_profile_id                                              Int           @id @default(autoincrement())
+  bcu_lock_entity_id                                                  Int
+  flag_element_id                                                     Int
+  entity                                                              entity        @relation(fields: [bcu_lock_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile_bcu_lock_registry_server_user_profile_idTouser_profile user_profile  @relation("bcu_lock_registry_server_user_profile_idTouser_profile", fields: [server_user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile_bcu_lock_registry_user_profile_idTouser_profile        user_profile? @relation("bcu_lock_registry_user_profile_idTouser_profile", fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                                                                 map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_bcu_lock_registry_for_user_profile_id_and_map_id")
+  @@index([bcu_lock_entity_id], map: "index_on_bcu_lock_registry_for_bcu_lock_entity_id")
+}
+
+model chest_acquisition {
+  base_id                Int
+  entity_id              Int
+  acquisition_start_time Float
+  owning_user_profile_id Int?   @default(0)
+  entity                 entity @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  base                   base   @relation(fields: [base_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([base_id, entity_id])
+  @@index([entity_id], map: "index_on_chest_acquisition_for_entity_id")
+}
+
+model cooking_instance {
+  id                  Int             @id @default(autoincrement())
+  manager_id          Int
+  utility_type        String?
+  bound_utility       Int?
+  bound_recipe        Int?
+  ingredients         Bytes?
+  temperature         Float?
+  softPeakTemperature Float?
+  progress            Float?
+  cook_quality        Int?
+  owner_utility       Int?
+  tag_index           Int?
+  internal_coords     Bytes?
+  packed_locations    Bytes?
+  radius              Float?
+  finished            Boolean?
+  can_bound_other     Boolean?
+  bounded_to          Int?
+  cooked_time         Float?
+  exhaustion_bonus    Float?          @default(0.0)
+  cooking_manager     cooking_manager @relation(fields: [manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([manager_id, owner_utility, tag_index], map: "index_on_cooking_instance_for_manager_id_and_owner_utility_and_tag_index")
+  @@index([bound_utility], map: "index_on_cooking_instance_for_bound_utility")
+}
+
+model cooking_manager {
+  id               Int                @id @default(autoincrement())
+  map_id           Int
+  user_profile_id  Int?
+  snapped_keys     Bytes?
+  snapped_values   Bytes?
+  cooking_instance cooking_instance[]
+  map              map                @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile     user_profile?      @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_cooking_manager_for_user_profile_id_and_map_id")
+}
+
+model custom_zone_configuration {
+  id               Int
+  map_id           Int
+  name             String?
+  color_red        Float?
+  color_green      Float?
+  color_blue       Float?
+  handling_methods BigInt?
+  map              map     @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id, map_id])
+  @@index([map_id], map: "index_on_custom_zone_configuration_for_map_id")
+}
+
+model custom_zone_region {
+  id                   Int
+  map_id               Int
+  name                 String?
+  location_x           Float?
+  location_y           Float?
+  size_x               Float?
+  size_y               Float?
+  configuration_index  Unsupported("tinyint")?
+  default_region_name  String?
+  default_region_state Unsupported("tinyint")?
+  map                  map                     @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id, map_id])
+  @@index([map_id], map: "index_on_custom_zone_region_for_map_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model db_info {
+  last_vacuum_time String?
+  next_free_id     Int?    @default(1)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model door_locking_registry_data {
+  asset           String
+  count           Int
+  type            Int
+  map_id          Int
+  user_profile_id Int?
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, type, asset])
+  @@ignore
+}
+
+model economy {
+  id                            Int           @id @default(autoincrement())
+  map_id                        Int?
+  user_profile_id               Int?
+  save_timestamp                Int?
+  time_since_last_economy_reset Int           @default(0)
+  user_profile                  user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                           map?          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_economy_for_user_profile_id_and_map_id")
+}
+
+model economy_outpost_gold {
+  id                                           Int              @id @default(autoincrement())
+  map_id                                       Int?
+  user_profile_id                              Int?
+  outpost_id                                   Int
+  gold_buying_capability_funds                 Int?
+  gold_selling_capability_funds                Int?
+  gold_selling_capability_funds_restock_amount Float?
+  economy_outposts                             economy_outposts @relation(fields: [outpost_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                                 user_profile?    @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                                          map?             @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, outpost_id], map: "index_on_economy_outpost_gold_for_user_profile_id_and_map_id_and_outpost_id")
+  @@index([outpost_id], map: "index_on_economy_outpost_gold_for_outpost_id")
+}
+
+model economy_outposts {
+  id                                Int                    @id @default(autoincrement())
+  map_id                            Int?
+  user_profile_id                   Int?
+  outpost_runtime_id                String?
+  buying_capability                 Float?
+  outpost_bank_funds                Float?
+  economy_reset_elapsed_time        Float?
+  prices_randomization_elapsed_time Float?
+  save_timestamp                    Int?
+  price_delta_seed                  Float?
+  tradeable_rotation_elapsed_time   Float?
+  economy_outpost_gold              economy_outpost_gold[]
+  user_profile                      user_profile?          @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                               map?                   @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, outpost_runtime_id], map: "index_on_economy_outposts_for_user_profile_id_and_map_id_and_outpost_runtime_id")
+}
+
+model economy_special_deals {
+  id                         Int          @id @default(autoincrement())
+  map_id                     Int
+  user_profile_id            Int
+  sector                     String
+  tradeable_asset            String
+  base_purchase_price        Int?
+  amount_in_store            Int?
+  override_purchase_ability  Boolean?
+  can_be_purchased_by_player Boolean?
+  required_fame_points       Int?
+  trader                     String
+  map                        map          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile               user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id, sector, tradeable_asset], map: "sqlite_autoindex_economy_special_deals_1")
+}
+
+model economy_tradeables_info {
+  id                               Int             @id @default(autoincrement())
+  map_id                           Int?
+  user_profile_id                  Int?
+  trader_id                        Int
+  tradeable_asset                  String?
+  amount_in_store                  Int
+  restock_amount                   Float?
+  is_omitted_from_current_rotation Boolean?
+  economy_traders                  economy_traders @relation(fields: [trader_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                     user_profile?   @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                              map?            @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, trader_id, tradeable_asset], map: "index_on_economy_tradeables_info_for_user_profile_id_and_map_id_and_trader_id_and_tradeable_asset")
+  @@index([trader_id], map: "index_on_economy_tradeables_info_for_trader_id")
+}
+
+model economy_traders {
+  id                      Int                       @id @default(autoincrement())
+  map_id                  Int?
+  user_profile_id         Int?
+  trader_runtime_id       String?
+  available_funds         Int?
+  economy_tradeables_info economy_tradeables_info[]
+  user_profile            user_profile?             @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                     map?                      @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, trader_runtime_id], map: "index_on_economy_traders_for_user_profile_id_and_map_id_and_trader_runtime_id")
+}
+
+model elevated_users {
+  user_id String @id
+}
+
+model entity {
+  id                                                                                                               Int                                     @id @default(autoincrement())
+  entity_system_id                                                                                                 Int
+  class                                                                                                            String
+  owning_entity_id                                                                                                 Int?
+  parent_entity_id                                                                                                 Int?
+  location_x                                                                                                       Float                                   @default(0.0)
+  location_y                                                                                                       Float                                   @default(0.0)
+  location_z                                                                                                       Float                                   @default(0.0)
+  rotation_x                                                                                                       Float                                   @default(0.0)
+  rotation_y                                                                                                       Float                                   @default(0.0)
+  rotation_z                                                                                                       Float                                   @default(0.0)
+  scale_x                                                                                                          Float                                   @default(1.0)
+  scale_y                                                                                                          Float                                   @default(1.0)
+  scale_z                                                                                                          Float                                   @default(1.0)
+  flags                                                                                                            Int                                     @default(0)
+  data                                                                                                             Bytes?
+  reason                                                                                                           String?
+  abandoned_bunker_switchboard_fuse                                                                                abandoned_bunker_switchboard_fuse[]     @ignore
+  bank_account_registry_cards                                                                                      bank_account_registry_cards[]
+  base_element_item                                                                                                base_element_item[]                     @ignore
+  bcu_lock_registry                                                                                                bcu_lock_registry[]
+  chest_acquisition                                                                                                chest_acquisition[]
+  entity_entity_parent_entity_idToentity                                                                           entity?                                 @relation("entity_parent_entity_idToentity", fields: [parent_entity_id], references: [id], onUpdate: NoAction)
+  other_entity_entity_parent_entity_idToentity                                                                     entity[]                                @relation("entity_parent_entity_idToentity")
+  entity_entity_owning_entity_idToentity                                                                           entity?                                 @relation("entity_owning_entity_idToentity", fields: [owning_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_entity_entity_owning_entity_idToentity                                                                     entity[]                                @relation("entity_owning_entity_idToentity")
+  entity_system                                                                                                    entity_system                           @relation(fields: [entity_system_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_component                                                                                                 entity_component[]
+  entity_to_delete_on_startup                                                                                      entity_to_delete_on_startup?
+  item_entity                                                                                                      item_entity?
+  item_inventory_contained_items_item_inventory_contained_items_contained_item_entity_idToentity                   item_inventory_contained_items[]        @relation("item_inventory_contained_items_contained_item_entity_idToentity")
+  item_inventory_contained_items_item_inventory_contained_items_item_entity_idToentity                             item_inventory_contained_items[]        @relation("item_inventory_contained_items_item_entity_idToentity")
+  key_card_item_entity                                                                                             key_card_item_entity?
+  prisoner_bondage                                                                                                 prisoner_bondage[]
+  prisoner_entity                                                                                                  prisoner_entity?
+  prisoner_inventory_equipped_item_prisoner_inventory_equipped_item_item_entity_idToentity                         prisoner_inventory_equipped_item[]      @relation("prisoner_inventory_equipped_item_item_entity_idToentity")
+  prisoner_inventory_equipped_item_prisoner_inventory_equipped_item_prisoner_entity_idToentity                     prisoner_inventory_equipped_item[]      @relation("prisoner_inventory_equipped_item_prisoner_entity_idToentity")
+  prisoner_inventory_hands_and_holsters_prisoner_inventory_hands_and_holsters_right_holster_item_entity_idToentity prisoner_inventory_hands_and_holsters[] @relation("prisoner_inventory_hands_and_holsters_right_holster_item_entity_idToentity")
+  prisoner_inventory_hands_and_holsters_prisoner_inventory_hands_and_holsters_left_holster_item_entity_idToentity  prisoner_inventory_hands_and_holsters[] @relation("prisoner_inventory_hands_and_holsters_left_holster_item_entity_idToentity")
+  prisoner_inventory_hands_and_holsters_prisoner_inventory_hands_and_holsters_hands_item_entity_idToentity         prisoner_inventory_hands_and_holsters[] @relation("prisoner_inventory_hands_and_holsters_hands_item_entity_idToentity")
+  prisoner_inventory_hands_and_holsters_prisoner_inventory_hands_and_holsters_prisoner_entity_idToentity           prisoner_inventory_hands_and_holsters?  @relation("prisoner_inventory_hands_and_holsters_prisoner_entity_idToentity")
+  prisoner_inventory_quick_access_slot_prisoner_inventory_quick_access_slot_item_entity_idToentity                 prisoner_inventory_quick_access_slot[]  @relation("prisoner_inventory_quick_access_slot_item_entity_idToentity")
+  prisoner_inventory_quick_access_slot_prisoner_inventory_quick_access_slot_prisoner_entity_idToentity             prisoner_inventory_quick_access_slot[]  @relation("prisoner_inventory_quick_access_slot_prisoner_entity_idToentity")
+  prisoner_prison_wallet                                                                                           prisoner_prison_wallet?
+  prisoner_vehicle_mountee_info                                                                                    prisoner_vehicle_mountee_info[]
+  vehicle_entity_vehicle_entity_item_container_entity_idToentity                                                   vehicle_entity[]                        @relation("vehicle_entity_item_container_entity_idToentity")
+  vehicle_entity_vehicle_entity_entity_idToentity                                                                  vehicle_entity?                         @relation("vehicle_entity_entity_idToentity")
+  vehicle_spawner                                                                                                  vehicle_spawner?
+  virtualized_item                                                                                                 virtualized_item?
+
+  @@index([parent_entity_id], map: "index_on_entity_for_parent_entity_id")
+  @@index([owning_entity_id], map: "index_on_entity_for_owning_entity_id")
+  @@index([entity_system_id], map: "index_on_entity_for_entity_system_id")
+}
+
+model entity_component {
+  id                                                                Int                                                                 @id @default(autoincrement())
+  entity_id                                                         Int
+  name                                                              String
+  class                                                             String
+  flags                                                             Int                                                                 @default(0)
+  data                                                              Bytes?
+  entity                                                            entity                                                              @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  expirable_entity_component                                        expirable_entity_component?
+  item_spawner_evaluation_result_entity_component                   item_spawner_evaluation_result_entity_component?
+  item_spawner_evaluation_result_entity_component_post_spawn_action item_spawner_evaluation_result_entity_component_post_spawn_action[]
+
+  @@unique([entity_id, name], map: "index_on_entity_component_for_entity_id_and_name")
+}
+
+model entity_system {
+  id                            Int                             @id @default(autoincrement())
+  map_id                        Int
+  user_profile_id               Int?
+  latest_fake_entity_id         Int                             @default(0)
+  timestamp                     Float                           @default(0.0)
+  entity                        entity[]
+  user_profile                  user_profile?                   @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                           map                             @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  item_entity_spawner           item_entity_spawner[]
+  item_spawning_cooldown_groups item_spawning_cooldown_groups[] @ignore
+
+  @@index([user_profile_id, map_id], map: "index_on_entity_system_for_user_profile_id_and_map_id")
+}
+
+model entity_to_delete_on_startup {
+  entity_id Int    @id @default(autoincrement())
+  entity    entity @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model event {
+  id                Int                 @id @default(autoincrement())
+  event_participant event_participant[]
+  event_round       event_round[]
+}
+
+model event_participant {
+  event_id        Int
+  user_profile_id Int
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event           event        @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, event_id])
+  @@index([event_id], map: "index_on_event_participant_for_event_id")
+}
+
+model event_rankings_cached {
+  user_id             String
+  user_profile_id     Int          @id @default(autoincrement())
+  name                String
+  is_banned           Int          @default(0)
+  fame_points         Float        @default(0.0)
+  score               Float        @default(0.0)
+  enemy_kills         Int          @default(0)
+  team_kills          Int          @default(0)
+  deaths              Int          @default(0)
+  suicides            Int          @default(0)
+  assists             Int          @default(0)
+  headshots           Int          @default(0)
+  ctf_pickups         Int          @default(0)
+  ctf_captures        Int          @default(0)
+  ctf_returns         Int          @default(0)
+  dm_longest_headshot Float        @default(0.0)
+  dm_melee_kills      Int          @default(0)
+  dm_longest_life     Float        @default(0.0)
+  dz_activations      Int          @default(0)
+  user_profile        user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user                user         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "index_on_event_rankings_cached_for_user_id")
+}
+
+model event_round {
+  id                    Int                     @id @default(autoincrement())
+  event_id              Int
+  start_time            String?
+  end_time              String?
+  event                 event                   @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event_round_stats     event_round_stats[]
+  event_round_stats_ctf event_round_stats_ctf[]
+  event_round_stats_dm  event_round_stats_dm[]
+  event_round_stats_dz  event_round_stats_dz[]
+
+  @@index([event_id], map: "index_on_event_round_for_event_id")
+}
+
+model event_round_stats {
+  round_id        Int
+  user_profile_id Int
+  score           Float?
+  enemy_kills     Int?
+  team_kills      Int?
+  deaths          Int?
+  suicides        Int?
+  assists         Int?
+  headshots       Int?
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event_round     event_round  @relation(fields: [round_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, round_id])
+  @@index([round_id], map: "index_on_event_round_stats_for_round_id")
+}
+
+model event_round_stats_ctf {
+  round_id        Int
+  user_profile_id Int
+  pickups         Int?
+  captures        Int?
+  returns         Int?
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event_round     event_round  @relation(fields: [round_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, round_id])
+  @@index([round_id], map: "index_on_event_round_stats_ctf_for_round_id")
+}
+
+model event_round_stats_dm {
+  round_id         Int
+  user_profile_id  Int
+  longest_headshot Float?
+  melee_kills      Int?
+  longest_life     Float?
+  user_profile     user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event_round      event_round  @relation(fields: [round_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, round_id])
+  @@index([round_id], map: "index_on_event_round_stats_dm_for_round_id")
+}
+
+model event_round_stats_dz {
+  round_id        Int
+  user_profile_id Int
+  activations     Int?
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  event_round     event_round  @relation(fields: [round_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, round_id])
+  @@index([round_id], map: "index_on_event_round_stats_dz_for_round_id")
+}
+
+model events_stats {
+  user_profile_id Int          @id @default(autoincrement())
+  events_won      Int?         @default(0)
+  events_lost     Int?         @default(0)
+  enemy_kills     Int?         @default(0)
+  deaths          Int?         @default(0)
+  ctf_captures    Int?         @default(0)
+  team_kills      Int?         @default(0)
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model expirable_entity_component {
+  entity_component_id Int              @id @default(autoincrement())
+  created_at          Float
+  entity_component    entity_component @relation(fields: [entity_component_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model expirable_vehicle_spawner_info {
+  map_id               Int?
+  user_profile_id      Int?
+  spawner_name         String?
+  num_spawners_created Int?
+  user_profile         user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                  map?          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, spawner_name])
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model finished_timed_gift_spawner {
+  map_id          Int?
+  user_profile_id Int?
+  spawn_time      Int?
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map?          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, spawn_time])
+  @@ignore
+}
+
+model fishing_stats {
+  user_profile_id      Int          @id @default(autoincrement())
+  fish_caught          Int?         @default(0)
+  fish_kept            Int?         @default(0)
+  fish_released        Int?         @default(0)
+  lines_broken         Int?         @default(0)
+  heaviest_fish_caught Float?       @default(0.0)
+  longest_fish_caught  Float?       @default(0.0)
+  bass_caught          Int?         @default(0)
+  catfish_caught       Int?         @default(0)
+  pike_caught          Int?         @default(0)
+  carp_caught          Int?         @default(0)
+  amur_caught          Int?         @default(0)
+  bleak_caught         Int?         @default(0)
+  chub_caught          Int?         @default(0)
+  ruffe_caught         Int?         @default(0)
+  prussian_carp_caught Int?         @default(0)
+  crucian_carp_caught  Int?         @default(0)
+  sardine_caught       Int?         @default(0)
+  dentex_caught        Int?         @default(0)
+  orata_caught         Int?         @default(0)
+  tuna_caught          Int?         @default(0)
+  user_profile         user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model garden {
+  id                       Int                  @id @default(autoincrement())
+  garden_manager_id        Int
+  owner_user_profile_id    Int?
+  owner_skill_level        Int?
+  num_slots_x              Int?
+  num_slots_y              Int?
+  location_x               Float?
+  location_y               Float?
+  location_z               Float?
+  rotation_r               Float?
+  rotation_p               Float?
+  rotation_y               Float?
+  crafted_age              Float?
+  has_greenhouse           Unsupported("bool")?
+  pest_disease_check_timer Float?
+  health                   Float                @default(0.0)
+  user_profile             user_profile?        @relation(fields: [owner_user_profile_id], references: [id], onUpdate: NoAction)
+  garden_manager           garden_manager       @relation(fields: [garden_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  garden_slot              garden_slot[]
+
+  @@index([owner_user_profile_id], map: "index_on_garden_for_owner_user_profile_id")
+  @@index([garden_manager_id], map: "index_on_garden_for_garden_manager_id")
+}
+
+model garden_manager {
+  id                                      Int                                       @id @default(autoincrement())
+  user_profile_id                         Int?
+  map_id                                  Int
+  sim_data_sun_irradiance                 Float?
+  sim_data_rain_average                   Float?
+  sim_data_time_range                     Float?
+  garden                                  garden[]
+  map                                     map                                       @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                            user_profile?                             @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  garden_manager_height_relative_sim_data garden_manager_height_relative_sim_data[]
+
+  @@index([user_profile_id, map_id], map: "index_on_garden_manager_for_user_profile_id_and_map_id")
+}
+
+model garden_manager_height_relative_sim_data {
+  id                Int            @id @default(autoincrement())
+  garden_manager_id Int
+  height            Float?
+  temperature       Float?
+  water_evaporation Float?
+  garden_manager    garden_manager @relation(fields: [garden_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([garden_manager_id], map: "index_on_garden_manager_height_relative_sim_data_for_garden_manager_id")
+}
+
+model garden_slot {
+  id                      Int                  @id @default(autoincrement())
+  garden_id               Int
+  planter_user_profile_id Int?
+  planter_skill_level     Int?
+  slot_position_x         Int?
+  slot_position_y         Int?
+  species                 String?
+  stage                   Int?
+  growth_percentage       Float?
+  water                   Float?
+  organic_fertilizer      Unsupported("bool")?
+  industrial_fertilizer   Unsupported("bool")?
+  weed_intenstiy          Float?
+  pesticide_timer         Float?
+  fungicide_timer         Float?
+  weed_repellent_timer    Float?
+  health                  Float?
+  dehidration_death_timer Float?
+  freezing_death_timer    Float?
+  pest_death_timer        Float?
+  disease_death_timer     Float?
+  old_age_death_timer     Float?
+  weed_check_timer        Float?
+  dead                    Unsupported("bool")?
+  user_profile            user_profile?        @relation(fields: [planter_user_profile_id], references: [id], onUpdate: NoAction)
+  garden                  garden               @relation(fields: [garden_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  garden_slot_pest        garden_slot_pest[]
+
+  @@index([planter_user_profile_id], map: "index_on_garden_slot_for_planter_user_profile_id")
+  @@index([garden_id], map: "index_on_garden_slot_for_garden_id")
+}
+
+model garden_slot_pest {
+  id                Int         @id @default(autoincrement())
+  garden_slot_id    Int
+  pest_species      String?
+  pest_intensity    Float?
+  disease_species   String?
+  disease_intensity Float?
+  garden_slot       garden_slot @relation(fields: [garden_slot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([garden_slot_id], map: "index_on_garden_slot_pest_for_garden_slot_id")
+}
+
+model global_encounter_manager {
+  id                                        Int                                         @id @default(autoincrement())
+  map_id                                    Int
+  user_profile_id                           Int?
+  max_group_id                              Int?                                        @default(0)
+  map                                       map                                         @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                              user_profile?                               @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  global_encounter_manager_bb_data          global_encounter_manager_bb_data[]
+  global_encounter_manager_bb_data_flags    global_encounter_manager_bb_data_flags[]
+  global_encounter_manager_rogue_characters global_encounter_manager_rogue_characters[]
+  global_encounter_manager_visited_points   global_encounter_manager_visited_points[]
+  global_encounter_manager_zone_cooldown    global_encounter_manager_zone_cooldown[]
+  virtualized_encounters                    virtualized_encounters[]
+
+  @@index([user_profile_id, map_id], map: "index_on_global_encounter_manager_for_user_profile_id_and_map_id")
+}
+
+model global_encounter_manager_bb_data {
+  id                                     Int                                      @id @default(autoincrement())
+  global_encounter_manager_id            Int
+  base_id                                Int
+  at_least_one_base_member_present_time  Float?
+  encounter_cooldown                     Float?
+  base_lifetime                          Float?                                   @default(0.0)
+  global_encounter_manager               global_encounter_manager                 @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  global_encounter_manager_bb_data_flags global_encounter_manager_bb_data_flags[]
+
+  @@index([global_encounter_manager_id], map: "index_on_global_encounter_manager_bb_data_for_global_encounter_manager_id")
+  @@index([base_id], map: "index_on_global_encounter_manager_bb_data_for_base_id")
+}
+
+model global_encounter_manager_bb_data_flags {
+  id                                  Int                              @id @default(autoincrement())
+  global_encounter_manager_id         Int
+  global_encounter_manager_bb_data_id Int
+  flag_id                             Int
+  global_encounter_manager_bb_data    global_encounter_manager_bb_data @relation(fields: [global_encounter_manager_bb_data_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  global_encounter_manager            global_encounter_manager         @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([global_encounter_manager_id, flag_id], map: "index_on_global_encounter_manager_bb_data_flags_for_global_encounter_manager_id_and_flag_id")
+  @@index([global_encounter_manager_bb_data_id, global_encounter_manager_id], map: "index_on_global_encounter_manager_bb_data_flags_for_global_encounter_manager_bb_data_id_and_global_encounter_manager_id")
+}
+
+model global_encounter_manager_rogue_characters {
+  id                          Int                      @id @default(autoincrement())
+  global_encounter_manager_id Int
+  character_class             Unsupported("string")?
+  character_location_x        Float?
+  character_location_y        Float?
+  character_location_z        Float?
+  character_rotation_yaw      Float?
+  character_data              Bytes?
+  preset_type                 String?
+  global_encounter_manager    global_encounter_manager @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([global_encounter_manager_id], map: "index_on_global_encounter_manager_rogue_characters_for_global_encounter_manager_id")
+}
+
+model global_encounter_manager_visited_points {
+  id                          Int                      @id @default(autoincrement())
+  global_encounter_manager_id Int
+  location_x                  Float?
+  location_y                  Float?
+  location_z                  Float?
+  xy_size                     Float?
+  z_size                      Float?
+  stay_alive_timestamp        Float?
+  remove_time                 Float?
+  is_subzone_point            Boolean?
+  global_encounter_manager    global_encounter_manager @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([global_encounter_manager_id], map: "index_on_global_encounter_manager_visited_points_for_global_encounter_manager_id")
+}
+
+model global_encounter_manager_zone_cooldown {
+  id                          Int                      @id @default(autoincrement())
+  global_encounter_manager_id Int
+  zone_location_x             Float?
+  zone_location_y             Float?
+  zone_location_z             Float?
+  sub_zone_index              Int?
+  cooldown                    Float?
+  global_encounter_manager    global_encounter_manager @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([global_encounter_manager_id], map: "index_on_global_encounter_manager_zone_cooldown_for_global_encounter_manager_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model global_radiation_data {
+  map_id          Int
+  user_profile_id Int?
+  timestamp       Int           @default(0)
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id])
+  @@ignore
+}
+
+model gold_price_master_multipliers {
+  id         Int    @id @default(autoincrement())
+  date       Int?
+  multiplier Float?
+}
+
+model heat_source {
+  id                     Int                 @id @default(autoincrement())
+  map_id                 Int?
+  user_profile_id        Int?
+  location_x             Float?
+  location_y             Float?
+  location_z             Float?
+  temperature            Float?
+  burning_speed          Float?
+  distance_scale         Float?
+  inner_radius           Float?
+  outer_radius           Float?
+  fuel_capacity          Float?
+  temperature_curve_path String?
+  fuel                   Bytes?
+  uses_fuel_simulation   Unsupported("bool") @default(dbgenerated("0"))
+  operating_temperature  Float?
+  user_profile           user_profile?       @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                    map?                @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_heat_source_for_user_profile_id_and_map_in")
+}
+
+model item_container_upgrades {
+  id                Int             @id @default(autoincrement())
+  item_container_id Int
+  asset             String?
+  num_tries         Int?
+  item_containers   item_containers @relation(fields: [item_container_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([item_container_id], map: "index_on_item_container_upgrades_for_item_container_id")
+}
+
+model item_containers {
+  id                      Int                       @id @default(autoincrement())
+  map_id                  Int
+  user_profile_id         Int?
+  runtime_id              String
+  lock_reset_time         Int?
+  item_container_upgrades item_container_upgrades[]
+  user_profile            user_profile?             @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                     map                       @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id, runtime_id], map: "index_on_item_containers_for_user_profile_id_and_map_id_and_runtime_id")
+}
+
+model item_entity {
+  entity_id                 Int                         @id @default(autoincrement())
+  health                    Float?
+  max_health                Float?
+  radiation_amount          Float?
+  xml                       String?
+  entity                    entity                      @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  item_entity_spawner_entry item_entity_spawner_entry[]
+}
+
+model item_entity_spawner {
+  id                           Int                            @id @default(autoincrement())
+  name                         String
+  entity_system_id             Int
+  evaluation_time              Float                          @default(0.0)
+  num_evaluations              Int?                           @default(0)
+  entity_system                entity_system                  @relation(fields: [entity_system_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  item_entity_spawner_cooldown item_entity_spawner_cooldown[]
+  item_entity_spawner_entry    item_entity_spawner_entry[]
+
+  @@index([entity_system_id, name], map: "index_on_item_entity_spawner_for_entity_system_id_and_name")
+}
+
+model item_entity_spawner_cooldown {
+  item_entity_spawner_id Int
+  key                    Int
+  value                  Float               @default(0.0)
+  item_entity_spawner    item_entity_spawner @relation(fields: [item_entity_spawner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([item_entity_spawner_id, key])
+  @@index([key], map: "index_on_item_entity_spawner_cooldown_for_key")
+}
+
+model item_entity_spawner_entry {
+  item_entity_spawner_id Int
+  idx                    Int
+  entity_id              Int?
+  item_entity            item_entity?        @relation(fields: [entity_id], references: [entity_id], onUpdate: NoAction)
+  item_entity_spawner    item_entity_spawner @relation(fields: [item_entity_spawner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([item_entity_spawner_id, idx])
+  @@index([idx], map: "index_on_item_entity_spawner_entry_for_idx")
+  @@index([entity_id], map: "index_on_item_entity_spawner_entry_for_entity_id")
+}
+
+model item_inventory_contained_items {
+  item_entity_id                                                         Int
+  contained_item_entity_id                                               Int
+  contained_item_slot_x                                                  Int
+  contained_item_slot_y                                                  Int
+  contained_item_slot_r                                                  Int
+  contained_item_slot_decay_delta_time                                   Float  @default(0.0)
+  entity_item_inventory_contained_items_contained_item_entity_idToentity entity @relation("item_inventory_contained_items_contained_item_entity_idToentity", fields: [contained_item_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_item_inventory_contained_items_item_entity_idToentity           entity @relation("item_inventory_contained_items_item_entity_idToentity", fields: [item_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([item_entity_id, contained_item_entity_id])
+  @@index([contained_item_entity_id], map: "index_on_item_inventory_contained_items_for_contained_item_entity_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model item_radiation_exposure_data {
+  item_id_1                Int
+  item_id_2                Int
+  map_id                   Int
+  user_profile_id          Int?
+  radiation_amount         Float         @default(0.0)
+  pending_radiation_amount Float         @default(0.0)
+  modified_timestamp       Int           @default(0)
+  user_profile             user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                      map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, item_id_1, item_id_2])
+  @@ignore
+}
+
+model item_spawner_evaluation_result_entity_component {
+  entity_component_id Int              @id @default(autoincrement())
+  usage_ratio         Float
+  health_ratio        Float
+  entity_component    entity_component @relation(fields: [entity_component_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model item_spawner_evaluation_result_entity_component_post_spawn_action {
+  entity_component_id Int
+  idx                 Int
+  action              String
+  entity_component    entity_component @relation(fields: [entity_component_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([entity_component_id, idx])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model item_spawning_cooldown_groups {
+  entity_system_id Int
+  idx              Int
+  cooldown_min     Int           @default(0)
+  cooldown_max     Int           @default(0)
+  entity_system    entity_system @relation(fields: [entity_system_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([entity_system_id], map: "index_on_item_spawning_cooldown_groups_for_entity_system_id")
+  @@ignore
+}
+
+model key_card_item_entity {
+  entity_id    Int     @id @default(autoincrement())
+  spawn_reason String?
+  entity       entity  @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model killbox {
+  name            String
+  map_id          Int
+  user_profile_id Int?
+  is_active       Unsupported("bool")?
+  is_finale       Unsupported("bool")?
+  remaining_time  Float?
+  user_profile    user_profile?        @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map                  @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, name])
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model local_chat_history {
+  chat_line String
+
+  @@ignore
+}
+
+model map {
+  id                                         Int                                          @id @default(autoincrement())
+  name                                       String?
+  abandoned_bunker                           abandoned_bunker[]
+  active_quest                               active_quest[]
+  active_task                                active_task[]
+  available_task                             available_task[]
+  bank_account_registry                      bank_account_registry[]
+  bank_account_registry_cards                bank_account_registry_cards[]
+  bank_account_registry_currencies           bank_account_registry_currencies[]
+  bank_general_data                          bank_general_data[]
+  base                                       base[]
+  base_raid_protection_manager               base_raid_protection_manager[]
+  bcu_lock_registry                          bcu_lock_registry[]
+  cooking_manager                            cooking_manager[]
+  custom_zone_configuration                  custom_zone_configuration[]
+  custom_zone_region                         custom_zone_region[]
+  door_locking_registry_data                 door_locking_registry_data[]                 @ignore
+  economy                                    economy[]
+  economy_outpost_gold                       economy_outpost_gold[]
+  economy_outposts                           economy_outposts[]
+  economy_special_deals                      economy_special_deals[]
+  economy_tradeables_info                    economy_tradeables_info[]
+  economy_traders                            economy_traders[]
+  entity_system                              entity_system[]
+  expirable_vehicle_spawner_info             expirable_vehicle_spawner_info[]             @ignore
+  finished_timed_gift_spawner                finished_timed_gift_spawner[]                @ignore
+  garden_manager                             garden_manager[]
+  global_encounter_manager                   global_encounter_manager[]
+  global_radiation_data                      global_radiation_data[]                      @ignore
+  heat_source                                heat_source[]
+  item_containers                            item_containers[]
+  item_radiation_exposure_data               item_radiation_exposure_data[]               @ignore
+  killbox                                    killbox[]                                    @ignore
+  placeable                                  placeable[]
+  prisoner_spawn_location                    prisoner_spawn_location[]
+  quest_cycle_stats                          quest_cycle_stats[]
+  quest_lifetime_stats                       quest_lifetime_stats[]
+  quest_pool                                 quest_pool[]
+  quest_refresh                              quest_refresh[]
+  quest_unlocked_tag                         quest_unlocked_tag[]
+  rain_collector                             rain_collector[]                             @ignore
+  remote_sensor_registry_key_codes_to_unpair remote_sensor_registry_key_codes_to_unpair[] @ignore
+  replenishable_resource                     replenishable_resource[]
+  restorable_mesh_instance                   restorable_mesh_instance[]
+  sentries                                   sentries[]
+  sentry_ai_controllers                      sentry_ai_controllers[]
+  sentry_spawners                            sentry_spawners[]
+  shown_dialogues                            shown_dialogues[]                            @ignore
+  shown_survival_tips                        shown_survival_tips[]                        @ignore
+  spawned_item_expiration_data               spawned_item_expiration_data[]
+  tracked_quest                              tracked_quest[]
+  tracking_data_set                          tracking_data_set[]
+  vehicle_service                            vehicle_service[]                            @ignore
+  weather_parameters                         weather_parameters[]                         @ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model muted_users {
+  user_id_hashed    String? @id
+  user_profile_name String?
+
+  @@ignore
+}
+
+model notification {
+  id              Int          @id @default(autoincrement())
+  user_profile_id Int
+  data            Bytes?
+  timestamp       Int?
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id], map: "index_on_notification_for_user_profile_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model penalty_squad_leave_info {
+  user_id         String? @id
+  squadmates_left Int
+  user            user?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@ignore
+}
+
+model placeable {
+  id                     Int                      @id @default(autoincrement())
+  prisoner_id            Int
+  map_id                 Int
+  asset                  String?
+  location_x             Float?
+  location_y             Float?
+  location_z             Float?
+  rotation_pitch         Float?
+  rotation_yaw           Float?
+  rotation_roll          Float?
+  placement_location_x   Float?
+  placement_location_y   Float?
+  placement_location_z   Float?
+  status_flags           Int?                     @default(0)
+  process                Bytes?
+  map                    map                      @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prisoner               prisoner                 @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  placeable_basebuilding placeable_basebuilding[] @ignore
+  placeable_garden       placeable_garden[]
+  placeable_upgrade      placeable_upgrade[]      @ignore
+
+  @@index([prisoner_id, map_id], map: "index_on_placeable_for_prisoner_id_and_map_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model placeable_basebuilding {
+  placeable_id               Int
+  first_point_location_x     Float?
+  first_point_location_y     Float?
+  first_point_location_z     Float?
+  state_flags                Int?
+  first_point_rotation_pitch Float?
+  first_point_rotation_yaw   Float?
+  first_point_rotation_roll  Float?
+  placeable                  placeable @relation(fields: [placeable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([placeable_id], map: "index_on_placeable_basebuilding_for_placeable_id")
+  @@ignore
+}
+
+model placeable_garden {
+  id           Int       @id @default(autoincrement())
+  placeable_id Int
+  x_min        Int?
+  y_min        Int?
+  x_max        Int?
+  y_max        Int?
+  placeable    placeable @relation(fields: [placeable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([placeable_id], map: "index_on_placeable_garden_for_placeable_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model placeable_upgrade {
+  placeable_id       Int
+  element_base_id    Int
+  element_id         Int
+  element_location_x Float?
+  element_location_y Float?
+  element_location_z Float?
+  placeable          placeable @relation(fields: [placeable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([placeable_id], map: "index_on_placeable_upgrade_for_placeable_id")
+  @@ignore
+}
+
+model prisoner {
+  id                                                  Int                             @id @default(autoincrement())
+  user_profile_id                                     Int?
+  is_alive                                            Int?
+  time_of_death                                       String?
+  team_index                                          Int?
+  appearance_index                                    Int?
+  gender                                              Int?
+  head_tattoo_index                                   Int?
+  body_tattoo_index                                   Int?
+  stance                                              Int?
+  melee_target_selection_mode                         Int?
+  head_water_weight                                   Float?
+  upper_body_water_weight                             Float?
+  lower_body_water_weight                             Float?
+  feet_water_weight                                   Float?
+  penis_size                                          Float?
+  breast_size                                         Int?
+  time_of_revive                                      String?
+  body_simulation                                     Bytes?
+  should_play_intro_cinematic                         Boolean?
+  has_open_parachute                                  Boolean?
+  eligible_for_free_plastic_surgery                   Boolean?                        @default(false)
+  last_character_dlcs_owned                           Boolean?                        @default(false)
+  age                                                 Unsupported("tinyint")?         @default(dbgenerated("20"))
+  appearance_hair_style_index                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_face_type_index                          Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_skin_tone_index                          Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_hair_color_index                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eye_color_index                          Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_iris_type_index                          Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eye_makeup_metalness                     Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eye_makeup_intensity                     Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_lipstick_roughness                       Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_lipstick_intensity                       Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeshadow_color_r                        Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeshadow_color_g                        Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeshadow_color_b                        Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeliner_color_r                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeliner_color_g                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_eyeliner_color_b                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_lipstick_color_r                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_lipstick_color_g                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  appearance_lipstick_color_b                         Unsupported("tinyint")?         @default(dbgenerated("0"))
+  awarded_character_dlc_plastic_surgeries             Boolean?                        @default(false)
+  should_spawn_default_equipment                      Int?
+  last_save_time                                      Int?
+  is_in_bed                                           Boolean?
+  appearance_moustache_style_index                    Int?                            @default(-1)
+  appearance_beard_style_index                        Int?                            @default(-1)
+  appearance_facial_hair_color_index                  Int?                            @default(0)
+  appearance_has_body_hair                            Boolean?                        @default(false)
+  placeable                                           placeable[]
+  user_profile_prisoner_user_profile_idTouser_profile user_profile?                   @relation("prisoner_user_profile_idTouser_profile", fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prisoner_bondage                                    prisoner_bondage[]
+  prisoner_consumed_items                             prisoner_consumed_items[]
+  prisoner_entity                                     prisoner_entity[]
+  prisoner_respawn_info                               prisoner_respawn_info?
+  prisoner_skill                                      prisoner_skill[]                @ignore
+  prisoner_spawn_location                             prisoner_spawn_location[]
+  prisoner_stats_tracking_info                        prisoner_stats_tracking_info?
+  prisoner_vehicle_mountee_info                       prisoner_vehicle_mountee_info[]
+  user_profile_user_profile_prisoner_idToprisoner     user_profile[]                  @relation("user_profile_prisoner_idToprisoner")
+
+  @@index([user_profile_id], map: "index_on_prisoner_for_user_profile_id")
+  @@index([gender, appearance_index], map: "index_on_prisoner_for_gender_and_appearance_index")
+}
+
+model prisoner_bondage {
+  prisoner_id    Int
+  body_part      Int
+  tightness      Float?
+  item_entity_id Int
+  prisoner       prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity         entity   @relation(fields: [item_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_id, body_part])
+  @@index([item_entity_id], map: "index_on_prisoner_bondage_for_item_entity_id")
+}
+
+model prisoner_consumed_items {
+  prisoner_id        Int
+  item_name          String
+  last_consumed_time Int?
+  consumed_amount    Float?
+  prisoner           prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_id, item_name])
+}
+
+model prisoner_entity {
+  entity_id   Int       @id @default(autoincrement())
+  prisoner_id Int?
+  prisoner    prisoner? @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity      entity    @relation(fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([prisoner_id], map: "index_on_prisoner_entity_for_prisoner_id")
+}
+
+model prisoner_inventory_equipped_item {
+  prisoner_entity_id                                                 Int
+  item_entity_id                                                     Int
+  entity_prisoner_inventory_equipped_item_item_entity_idToentity     entity @relation("prisoner_inventory_equipped_item_item_entity_idToentity", fields: [item_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity_prisoner_inventory_equipped_item_prisoner_entity_idToentity entity @relation("prisoner_inventory_equipped_item_prisoner_entity_idToentity", fields: [prisoner_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_entity_id, item_entity_id])
+  @@index([item_entity_id], map: "index_on_prisoner_inventory_equipped_item_for_item_entity_id")
+}
+
+model prisoner_inventory_hands_and_holsters {
+  prisoner_entity_id                                                                Int     @id @default(autoincrement())
+  hands_item_entity_id                                                              Int?
+  left_holster_item_entity_id                                                       Int?
+  right_holster_item_entity_id                                                      Int?
+  entity_prisoner_inventory_hands_and_holsters_right_holster_item_entity_idToentity entity? @relation("prisoner_inventory_hands_and_holsters_right_holster_item_entity_idToentity", fields: [right_holster_item_entity_id], references: [id], onUpdate: NoAction)
+  entity_prisoner_inventory_hands_and_holsters_left_holster_item_entity_idToentity  entity? @relation("prisoner_inventory_hands_and_holsters_left_holster_item_entity_idToentity", fields: [left_holster_item_entity_id], references: [id], onUpdate: NoAction)
+  entity_prisoner_inventory_hands_and_holsters_hands_item_entity_idToentity         entity? @relation("prisoner_inventory_hands_and_holsters_hands_item_entity_idToentity", fields: [hands_item_entity_id], references: [id], onUpdate: NoAction)
+  entity_prisoner_inventory_hands_and_holsters_prisoner_entity_idToentity           entity  @relation("prisoner_inventory_hands_and_holsters_prisoner_entity_idToentity", fields: [prisoner_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([right_holster_item_entity_id], map: "index_on_prisoner_inventory_hands_and_holsters_for_right_holster_item_entity_id")
+  @@index([left_holster_item_entity_id], map: "index_on_prisoner_inventory_hands_and_holsters_for_left_holster_item_entity_id")
+  @@index([hands_item_entity_id], map: "index_on_prisoner_inventory_hands_and_holsters_for_hands_item_entity_id")
+}
+
+model prisoner_inventory_quick_access_slot {
+  prisoner_entity_id                                                     Int
+  slot_index                                                             Int
+  item_asset                                                             String
+  item_entity_id                                                         Int?
+  is_in_throwing_mode                                                    Int     @default(0)
+  entity_prisoner_inventory_quick_access_slot_item_entity_idToentity     entity? @relation("prisoner_inventory_quick_access_slot_item_entity_idToentity", fields: [item_entity_id], references: [id], onUpdate: NoAction)
+  entity_prisoner_inventory_quick_access_slot_prisoner_entity_idToentity entity  @relation("prisoner_inventory_quick_access_slot_prisoner_entity_idToentity", fields: [prisoner_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_entity_id, slot_index])
+  @@index([item_entity_id], map: "index_on_prisoner_inventory_quick_access_slot_for_item_entity_id")
+}
+
+model prisoner_prison_wallet {
+  prisoner_entity_id     Int    @id @default(autoincrement())
+  is_deluxe_item_pending Int
+  entity                 entity @relation(fields: [prisoner_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model prisoner_respawn_info {
+  prisoner_id             Int      @id @default(autoincrement())
+  penalty_random          Int?
+  penalty_sector          Int?
+  penalty_shelter         Int?
+  penalty_squad           Int?
+  last_use_random         String?
+  last_use_sector         String?
+  last_use_shelter        String?
+  last_use_squad          String?
+  commit_suicide_penalty  Int?
+  commit_suicide_last_use String?
+  prisoner                prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model prisoner_skill {
+  prisoner_id Int
+  name        String?
+  level       Int?
+  experience  Float?
+  xml         String?
+  prisoner    prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([prisoner_id], map: "index_on_prisoner_skill_for_prisoner_id")
+  @@ignore
+}
+
+model prisoner_spawn_location {
+  prisoner_id    Int
+  map_id         Int
+  type           Int
+  shelter_id     Int?
+  location_x     Float?
+  location_y     Float?
+  location_z     Float?
+  rotation_pitch Float?
+  rotation_yaw   Float?
+  rotation_roll  Float?
+  velocity_x     Float?
+  velocity_y     Float?
+  velocity_z     Float?
+  shelter        shelter? @relation(fields: [shelter_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map            map      @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prisoner       prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_id, map_id, type])
+}
+
+model prisoner_stats_tracking_info {
+  prisoner_id                        Int      @id @default(autoincrement())
+  has_ever_maxed_out_core_attributes Int?     @default(0)
+  prisoner                           prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model prisoner_vehicle_mountee_info {
+  prisoner_id       Int
+  vehicle_entity_id Int
+  mount_slot_index  Int?
+  entity            entity   @relation(fields: [vehicle_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  prisoner          prisoner @relation(fields: [prisoner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([prisoner_id, vehicle_entity_id])
+  @@index([vehicle_entity_id], map: "index_on_prisoner_vehicle_mountee_info_for_vehicle_entity_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model probation_squad_leave_info {
+  user_id         String? @id
+  start_timestamp Int
+  squadmates_left Int
+  user            user?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@ignore
+}
+
+model quest_cycle_stats {
+  id                   Int          @id @default(autoincrement())
+  user_profile_id      Int
+  map_id               Int
+  associated_npc       String?
+  sector               String?
+  num_completed_quests Int
+  map                  map          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile         user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id, associated_npc, sector], map: "sqlite_autoindex_quest_cycle_stats_1")
+}
+
+model quest_in_pool {
+  id                Int        @id @default(autoincrement())
+  quest_pool_id     Int
+  quest_mapping_key String
+  sector            String?
+  rewards_index     Int
+  quest_pool        quest_pool @relation(fields: [quest_pool_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([quest_pool_id], map: "index_on_quest_in_pool_for_quest_pool_id")
+}
+
+model quest_lifetime_stats {
+  id                         Int          @id @default(autoincrement())
+  user_profile_id            Int
+  map_id                     Int
+  associated_npc             String?
+  tier                       Int
+  sector                     String
+  total_num_completed_quests Int
+  map                        map          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile               user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id, associated_npc, tier, sector], map: "sqlite_autoindex_quest_lifetime_stats_1")
+}
+
+model quest_pool {
+  id                        Int             @id @default(autoincrement())
+  user_profile_id           Int?
+  map_id                    Int
+  quest_giver_hash          Int
+  quest_giver_bound_user_id Int?
+  quest_giver_type          String
+  quest_in_pool             quest_in_pool[]
+  map                       map             @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile              user_profile?   @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id, quest_giver_type, quest_giver_hash, quest_giver_bound_user_id], map: "sqlite_autoindex_quest_pool_1")
+}
+
+model quest_refresh {
+  id                   Int           @id @default(autoincrement())
+  user_profile_id      Int?
+  map_id               Int
+  next_reset_timestamp Float         @default(0.0)
+  map                  map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile         user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id], map: "sqlite_autoindex_quest_refresh_1")
+}
+
+model quest_unlocked_tag {
+  id              Int          @id @default(autoincrement())
+  user_profile_id Int
+  map_id          Int
+  tag             String
+  map             map          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_quest_unlocked_tag_for_user_profile_id_and_map_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model rain_collector {
+  id              Int
+  map_id          Int
+  user_profile_id Int?
+  amount          Float?
+  fill_rate       Float?
+  max_amount      Float?
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, id])
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model remote_sensor_registry_key_codes_to_unpair {
+  map_id          Int
+  user_profile_id Int?
+  key_code        String
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_remote_sensor_registry_key_codes_to_unpair_for_user_profile_id_and_map_id")
+  @@ignore
+}
+
+model replenishable_resource {
+  id              Int           @id @default(autoincrement())
+  map_id          Int
+  user_profile_id Int?
+  desc            Bytes?
+  amount          Float?
+  timer           Float?
+  save_time       Int?
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_replenishable_resource_for_user_profile_id_and_map_id")
+}
+
+model restorable_mesh_instance {
+  id               Int           @id @default(autoincrement())
+  map_id           Int
+  user_profile_id  Int?
+  component_name   String?
+  packed_location  Int?
+  location_x       Float?
+  location_y       Float?
+  location_z       Float?
+  rotation_x       Float?
+  rotation_y       Float?
+  rotation_z       Float?
+  rotation_w       Float?
+  scale_x          Float?
+  scale_y          Float?
+  scale_z          Float?
+  restore_interval Float?
+  restore_timer    Float?
+  save_time        Int?
+  user_profile     user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map              map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_restorable_mesh_instance_for_user_profile_id_and_map_id")
+}
+
+model sentries {
+  id                          Int                     @id @default(autoincrement())
+  user_profile_id             Int?
+  map_id                      Int?
+  sentry_location_x           Float?
+  sentry_location_y           Float?
+  sentry_location_z           Float?
+  sentry_rotation_yaw         Float?
+  sentry_health               Float?
+  sentry_longrangeweapon_ammo Int?
+  user_profile                user_profile?           @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                         map?                    @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sentry_ai_controllers       sentry_ai_controllers[]
+  sentry_spawners             sentry_spawners[]
+
+  @@index([user_profile_id, map_id], map: "index_on_sentries_for_user_profile_id_and_map_id")
+}
+
+model sentry_ai_controllers {
+  id                            Int                  @id @default(autoincrement())
+  user_profile_id               Int?
+  map_id                        Int?
+  sentry_id                     Int?
+  sentry_state                  Int?
+  player_last_known_location_x  Float?
+  player_last_known_location_y  Float?
+  player_last_known_location_z  Float?
+  player_last_known_direction_x Float?
+  player_last_known_direction_y Float?
+  player_last_known_direction_z Float?
+  player_threat_level           Float?
+  player_has_entered_hot_zone   Unsupported("bool")?
+  sentries                      sentries?            @relation(fields: [sentry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile                  user_profile?        @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                           map?                 @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_sentry_ai_controllers_for_user_profile_id_and_map_id")
+  @@index([sentry_id], map: "index_on_sentry_ai_controllers_for_sentry_id")
+}
+
+model sentry_spawners {
+  id                 Int           @id @default(autoincrement())
+  user_profile_id    Int?
+  map_id             Int?
+  spawner_location_x Float?
+  spawner_location_y Float?
+  spawner_location_z Float?
+  sentry_id          Int?
+  sentries           sentries?     @relation(fields: [sentry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile       user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                map?          @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_sentry_spawners_for_user_profile_id_and_map_id")
+  @@index([sentry_id], map: "index_on_sentry_spawners_for_sentry_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model server_settings {
+  enable_item_cooldown_groups Int @default(1)
+
+  @@ignore
+}
+
+model shelter {
+  id                       Int                        @id @default(autoincrement())
+  base_element_shelter_map base_element_shelter_map[]
+  prisoner_spawn_location  prisoner_spawn_location[]
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model shown_dialogues {
+  map_id          Int
+  user_profile_id Int?
+  dialogue_name   String
+  user_profile    user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map             map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, dialogue_name])
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model shown_survival_tips {
+  map_id            Int
+  user_profile_id   Int?
+  survival_tip_name String
+  seen_in_codex     Boolean?      @default(false)
+  user_profile      user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map               map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, survival_tip_name])
+  @@ignore
+}
+
+model spawned_item_expiration_data {
+  id                        Int           @id @default(autoincrement())
+  map_id                    Int
+  user_profile_id           Int?
+  examiner_user_id          String
+  item_asset                String
+  item_expiration_timestamp Int
+  user                      user          @relation(fields: [examiner_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile              user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                       map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id, map_id], map: "index_on_spawned_item_expiration_data_for_user_profile_id_and_map_id")
+  @@index([examiner_user_id], map: "index_on_spawned_item_expiration_data_for_examiner_user_id")
+}
+
+model squad {
+  id                      Int            @id @default(autoincrement())
+  name                    String?
+  message                 String?
+  emblem                  Int?
+  information             String?
+  score                   Float?
+  member_limit            Int?
+  last_member_login_time  String?
+  last_member_logout_time String?
+  squad_member            squad_member[]
+
+  @@index([name], map: "index_on_squad_for_name")
+}
+
+model squad_member {
+  id              Int          @id @default(autoincrement())
+  squad_id        Int
+  user_profile_id Int
+  rank            Int?
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  squad           squad        @relation(fields: [squad_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id], map: "index_on_squad_member_for_user_profile_id")
+  @@index([squad_id], map: "index_on_squad_member_for_squad_id")
+}
+
+model survival_stats {
+  user_profile_id                        Int          @id @default(autoincrement())
+  highest_positive_fame_points           Float?       @default(0.0)
+  doors_claimed                          Int?         @default(0)
+  animals_killed                         Int?         @default(0)
+  minutes_survived                       Float?       @default(0.0)
+  kills                                  Int?         @default(0)
+  deaths                                 Int?         @default(0)
+  locks_picked                           Int?         @default(0)
+  puppets_killed                         Int?         @default(0)
+  guns_crafted                           Int?         @default(0)
+  bullets_crafted                        Int?         @default(0)
+  arrows_crafted                         Int?         @default(0)
+  clothing_crafted                       Int?         @default(0)
+  longest_kill_distance                  Float?       @default(0.0)
+  melee_kills                            Int?         @default(0)
+  archery_kills                          Int?         @default(0)
+  players_knocked_out                    Int?         @default(0)
+  total_defecations                      Int?         @default(0)
+  total_urinations                       Int?         @default(0)
+  lights_fired                           Int?         @default(0)
+  containers_looted                      Int?         @default(0)
+  items_put_into_containers              Int?         @default(0)
+  deaths_by_prisoners                    Int?         @default(0)
+  animals_skinned                        Int?         @default(0)
+  food_eaten                             Float?       @default(0.0)
+  distance_travelled_by_foot             Float?       @default(0.0)
+  wounds_patched                         Int?         @default(0)
+  items_picked_up                        Int?         @default(0)
+  liquid_drank                           Float?       @default(0.0)
+  teeth_lost                             Int?         @default(0)
+  total_calories_intake                  Int?         @default(0)
+  shots_fired                            Int?         @default(0)
+  shots_hit                              Int?         @default(0)
+  headshots                              Int?         @default(0)
+  melee_weapon_swings                    Int?         @default(0)
+  melee_weapon_hits                      Int?         @default(0)
+  melee_weapons_crafted                  Int?         @default(0)
+  drone_kills                            Int?         @default(0)
+  sentry_kills                           Int?         @default(0)
+  prisoner_kills                         Int?         @default(0)
+  puppets_knocked_out                    Int?         @default(0)
+  diarrheas                              Int?         @default(0)
+  vomits                                 Int?         @default(0)
+  distance_travelled_in_vehicle          Float?       @default(0.0)
+  mushrooms_eaten                        Int?         @default(0)
+  highest_muscle_mass                    Float?       @default(0.0)
+  highest_fat                            Float?       @default(0.0)
+  heart_attacks                          Int?         @default(0)
+  overdose                               Int?         @default(0)
+  starvation                             Int?         @default(0)
+  highest_damage_taken                   Float?       @default(0.0)
+  highest_weight_carried                 Float?       @default(0.0)
+  lowest_negative_fame_points            Float?       @default(0.0)
+  distance_travelled_swimming            Float?       @default(0.0)
+  crows_killed                           Int?         @default(0)
+  seagulls_killed                        Int?         @default(0)
+  horses_killed                          Int?         @default(0)
+  boars_killed                           Int?         @default(0)
+  bears_killed                           Int?         @default(0)
+  goats_killed                           Int?         @default(0)
+  deers_killed                           Int?         @default(0)
+  chickens_killed                        Int?         @default(0)
+  rabbits_killed                         Int?         @default(0)
+  donkeys_killed                         Int?         @default(0)
+  times_mauled_by_bear                   Int?         @default(0)
+  longest_animal_kill_distance           Float?       @default(0.0)
+  alcohol_drank                          Int          @default(0)
+  foliage_cut                            Int          @default(0)
+  distance_travel_by_boat                Float        @default(0.0)
+  distance_sailed                        Float        @default(0.0)
+  times_caught_by_shark                  Int          @default(0)
+  times_escaped_shark_bite               Int          @default(0)
+  wolves_killed                          Int?         @default(0)
+  last_fame_point_award_consecutive_days Int?         @default(0)
+  firearm_kills                          Int?         @default(0)
+  bare_handed_kills                      Int?         @default(0)
+  user_profile                           user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model tracked_quest {
+  id                Int               @id @default(autoincrement())
+  user_profile_id   Int
+  map_id            Int
+  quest_id          Int
+  type              Int
+  tracking_data_set tracking_data_set @relation(fields: [quest_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map               map               @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile      user_profile      @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, map_id], map: "sqlite_autoindex_tracked_quest_1")
+  @@index([quest_id], map: "index_on_tracked_quest_for_quest_id")
+}
+
+model tracking_data {
+  id                   Int               @id @default(autoincrement())
+  tracking_data_set_id Int
+  data                 Bytes?
+  version              Int?              @default(0)
+  tracking_data_set    tracking_data_set @relation(fields: [tracking_data_set_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tracking_data_set_id], map: "index_on_tracking_data_for_tracking_data_set_id")
+}
+
+model tracking_data_set {
+  id              Int             @id @default(autoincrement())
+  user_profile_id Int?
+  map_id          Int
+  sequence_index  Int?
+  active_quest    active_quest?
+  active_task     active_task?
+  tracked_quest   tracked_quest[]
+  tracking_data   tracking_data[]
+  map             map             @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile    user_profile?   @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_profile_id], map: "index_on_tracking_data_set_for_user_profile_id")
+}
+
+model user {
+  id                                String                              @id
+  name                              String?
+  provider                          String?
+  last_login_time                   String?
+  last_direct_connection_address    String?
+  is_banned                         Int?
+  has_used_new_player_protection    Boolean?                            @default(false)
+  creation_time                     String?
+  event_rankings_cached             event_rankings_cached[]
+  penalty_squad_leave_info          penalty_squad_leave_info?           @ignore
+  probation_squad_leave_info        probation_squad_leave_info?         @ignore
+  spawned_item_expiration_data      spawned_item_expiration_data[]
+  user_favorite_server              user_favorite_server[]              @ignore
+  user_profile                      user_profile[]
+  user_profiles_marked_for_deletion user_profiles_marked_for_deletion[]
+  user_recent_server                user_recent_server[]                @ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_favorite_server {
+  user_id String
+  name    String?
+  host    String?
+  port    Int?
+  user    user    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "index_on_user_favorite_server_for_user_id")
+  @@ignore
+}
+
+model user_profile {
+  id                                                                                      Int                                          @id @default(autoincrement())
+  user_id                                                                                 String?
+  template_xml                                                                            String?
+  name                                                                                    String?
+  type                                                                                    Int?
+  authority_name                                                                          String?
+  authority_ip                                                                            String?
+  authority_response_port                                                                 Int?
+  authority_gameplay_port                                                                 Int?
+  authority_user_profile_id                                                               Int?
+  authority_auth_token                                                                    String?
+  last_login_time                                                                         String?
+  prisoner_id                                                                             Int?
+  fame_points                                                                             Float?
+  fake_name                                                                               String?
+  last_logout_time                                                                        String?
+  money_balance                                                                           Int?
+  global_spam_protection_state                                                            Bytes?
+  local_spam_protection_state                                                             Bytes?
+  last_name_change                                                                        String?
+  favorite_crafting_recipes                                                               Bytes?
+  deluxe_version                                                                          Bytes?
+  play_time                                                                               Int?                                         @default(0)
+  has_used_new_player_protection                                                          Boolean?                                     @default(false)
+  creation_time                                                                           String?
+  abandoned_bunker                                                                        abandoned_bunker[]
+  active_quest                                                                            active_quest[]
+  active_task                                                                             active_task[]
+  available_task                                                                          available_task[]
+  bank_account_registry_bank_account_registry_account_owner_user_profile_idTouser_profile bank_account_registry[]                      @relation("bank_account_registry_account_owner_user_profile_idTouser_profile")
+  bank_account_registry_bank_account_registry_user_profile_idTouser_profile               bank_account_registry[]                      @relation("bank_account_registry_user_profile_idTouser_profile")
+  bank_account_registry_cards                                                             bank_account_registry_cards[]
+  bank_account_registry_currencies                                                        bank_account_registry_currencies[]
+  bank_general_data                                                                       bank_general_data[]
+  base                                                                                    base[]
+  base_element                                                                            base_element[]
+  base_element_flag                                                                       base_element_flag[]                          @ignore
+  base_raid_protection_manager                                                            base_raid_protection_manager[]
+  bcu_lock_registry_bcu_lock_registry_server_user_profile_idTouser_profile                bcu_lock_registry?                           @relation("bcu_lock_registry_server_user_profile_idTouser_profile")
+  bcu_lock_registry_bcu_lock_registry_user_profile_idTouser_profile                       bcu_lock_registry[]                          @relation("bcu_lock_registry_user_profile_idTouser_profile")
+  cooking_manager                                                                         cooking_manager[]
+  door_locking_registry_data                                                              door_locking_registry_data[]                 @ignore
+  economy                                                                                 economy[]
+  economy_outpost_gold                                                                    economy_outpost_gold[]
+  economy_outposts                                                                        economy_outposts[]
+  economy_special_deals                                                                   economy_special_deals[]
+  economy_tradeables_info                                                                 economy_tradeables_info[]
+  economy_traders                                                                         economy_traders[]
+  entity_system                                                                           entity_system[]
+  event_participant                                                                       event_participant[]
+  event_rankings_cached                                                                   event_rankings_cached?
+  event_round_stats                                                                       event_round_stats[]
+  event_round_stats_ctf                                                                   event_round_stats_ctf[]
+  event_round_stats_dm                                                                    event_round_stats_dm[]
+  event_round_stats_dz                                                                    event_round_stats_dz[]
+  events_stats                                                                            events_stats?
+  expirable_vehicle_spawner_info                                                          expirable_vehicle_spawner_info[]             @ignore
+  finished_timed_gift_spawner                                                             finished_timed_gift_spawner[]                @ignore
+  fishing_stats                                                                           fishing_stats?
+  garden                                                                                  garden[]
+  garden_manager                                                                          garden_manager[]
+  garden_slot                                                                             garden_slot[]
+  global_encounter_manager                                                                global_encounter_manager[]
+  global_radiation_data                                                                   global_radiation_data[]                      @ignore
+  heat_source                                                                             heat_source[]
+  item_containers                                                                         item_containers[]
+  item_radiation_exposure_data                                                            item_radiation_exposure_data[]               @ignore
+  killbox                                                                                 killbox[]                                    @ignore
+  notification                                                                            notification[]
+  prisoner_prisoner_user_profile_idTouser_profile                                         prisoner[]                                   @relation("prisoner_user_profile_idTouser_profile")
+  quest_cycle_stats                                                                       quest_cycle_stats[]
+  quest_lifetime_stats                                                                    quest_lifetime_stats[]
+  quest_pool                                                                              quest_pool[]
+  quest_refresh                                                                           quest_refresh[]
+  quest_unlocked_tag                                                                      quest_unlocked_tag[]
+  rain_collector                                                                          rain_collector[]                             @ignore
+  remote_sensor_registry_key_codes_to_unpair                                              remote_sensor_registry_key_codes_to_unpair[] @ignore
+  replenishable_resource                                                                  replenishable_resource[]
+  restorable_mesh_instance                                                                restorable_mesh_instance[]
+  sentries                                                                                sentries[]
+  sentry_ai_controllers                                                                   sentry_ai_controllers[]
+  sentry_spawners                                                                         sentry_spawners[]
+  shown_dialogues                                                                         shown_dialogues[]                            @ignore
+  shown_survival_tips                                                                     shown_survival_tips[]                        @ignore
+  spawned_item_expiration_data                                                            spawned_item_expiration_data[]
+  squad_member                                                                            squad_member[]
+  survival_stats                                                                          survival_stats?
+  tracked_quest                                                                           tracked_quest[]
+  tracking_data_set                                                                       tracking_data_set[]
+  prisoner_user_profile_prisoner_idToprisoner                                             prisoner?                                    @relation("user_profile_prisoner_idToprisoner", fields: [prisoner_id], references: [id], onUpdate: NoAction)
+  user                                                                                    user?                                        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles_marked_for_deletion                                                       user_profiles_marked_for_deletion[]
+  vehicle_service                                                                         vehicle_service[]                            @ignore
+  virtualized_item                                                                        virtualized_item[]
+  weather_parameters                                                                      weather_parameters[]                         @ignore
+
+  @@index([user_id, type, name], map: "index_on_user_profile_for_user_id_and_type_and_name")
+  @@index([type], map: "index_on_user_profile_for_type")
+  @@index([prisoner_id], map: "index_on_user_profile_for_prisoner_id")
+}
+
+model user_profiles_marked_for_deletion {
+  id              Int          @id @default(autoincrement())
+  /// In the original db, the foreign key `user_profiles_marked_for_deletion.user_id`
+  /// is declared as `INTEGER`, but it references `user.id`, which is defined as `TEXT`. 
+  user_id         String
+  user_profile_id Int
+  user_profile    user_profile @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user            user         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_profile_id, user_id], map: "sqlite_autoindex_user_profiles_marked_for_deletion_1")
+  @@index([user_profile_id], map: "index_on_user_profiles_marked_for_deletion_for_user_profile_id")
+  @@index([user_id], map: "index_on_user_profiles_marked_for_deletion_for_user_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_recent_server {
+  user_id String
+  name    String?
+  host    String?
+  port    Int?
+  user    user    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "index_on_user_recent_server_for_user_id")
+  @@ignore
+}
+
+model vehicle_entity {
+  entity_id                                              Int               @id @default(autoincrement())
+  item_container_entity_id                               Int?
+  data                                                   Bytes?
+  entity_vehicle_entity_item_container_entity_idToentity entity?           @relation("vehicle_entity_item_container_entity_idToentity", fields: [item_container_entity_id], references: [id], onUpdate: NoAction)
+  entity_vehicle_entity_entity_idToentity                entity            @relation("vehicle_entity_entity_idToentity", fields: [entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vehicle_service                                        vehicle_service[] @ignore
+
+  @@index([item_container_entity_id], map: "index_on_vehicle_entity_for_item_container_entity_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model vehicle_service {
+  map_id               Int
+  user_profile_id      Int?
+  vehicle_id           Int
+  initiator_id         Int?
+  service_station_data Bytes?
+  vehicle_entity       vehicle_entity @relation(fields: [vehicle_id], references: [entity_id], onDelete: Cascade, onUpdate: NoAction)
+  user_profile         user_profile?  @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                  map            @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id, vehicle_id])
+  @@index([vehicle_id], map: "index_on_vehicle_service_for_vehicle_id")
+  @@ignore
+}
+
+model vehicle_spawner {
+  vehicle_entity_id                Int                 @id @default(autoincrement())
+  vehicle_asset_id                 String
+  vehicle_alias                    String
+  vehicle_last_access_time         Int
+  is_vehicle_automatically_created Unsupported("bool")
+  time_spent_in_forbidden_zone     Float
+  is_vehicle_functional            Unsupported("bool")
+  entity                           entity              @relation(fields: [vehicle_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model virtualized_encounters {
+  id                          Int                      @id @default(autoincrement())
+  global_encounter_manager_id Int
+  virutalized_encounter_data  Bytes?
+  reset_time                  Float?
+  global_encounter_manager    global_encounter_manager @relation(fields: [global_encounter_manager_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([global_encounter_manager_id], map: "index_on_virtualized_encounters_for_global_encounter_manager_id")
+}
+
+model virtualized_item {
+  item_entity_id        Int           @id @default(autoincrement())
+  expiration_time       Int?
+  item_name             String?
+  can_expire            Int?          @default(1)
+  save_time             Int?
+  bounds_size           Float?
+  queued_visit_time     Int?          @default(0)
+  item_user_data        Bytes?
+  owner_user_profile_id Int?
+  user_profile          user_profile? @relation(fields: [owner_user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  entity                entity        @relation(fields: [item_entity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([owner_user_profile_id], map: "index_on_virtualized_item_for_owner_user_profile_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model weather_parameters {
+  map_id                        Int
+  user_profile_id               Int?
+  time_of_day                   Float?
+  moon_rotation                 Float?
+  base_air_temperature          Float?
+  water_temperature             Float?
+  should_cumulonimbus_cause_fog Int?
+  fog_density                   Float?
+  data                          Bytes?
+  user_profile                  user_profile? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  map                           map           @relation(fields: [map_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_profile_id, map_id])
+  @@ignore
+}

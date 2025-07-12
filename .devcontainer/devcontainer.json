@@ -12,6 +12,11 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
+	"containerEnv": {
+		"DO_NOT_TRACK": "1", // Bun telemetry
+		"CHECKPOINT_DISABLE": "1" // Prisma telemtry
+	},
+
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand":"bash -i ./.devcontainer/postCreateCommand.sh",
 
@@ -19,7 +24,9 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"dbaeumer.vscode-eslint"
+				"dbaeumer.vscode-eslint",
+				"Prisma.prisma",
+				"oven.bun-vscode"
 			]
 		}
 	}

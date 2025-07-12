@@ -1,0 +1,6 @@
+{
+	"eslint.runtime": "bun",
+	"eslint.execArgv": [
+		"--bun"
+	],
+}

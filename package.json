@@ -1,27 +1,44 @@
 {
-	"name": "@snowyyd/typescript-template",
-	"description": "A TypeScript project template",
+	"name": "@scum-forge/dbhelper",
+	"description": "Database Helper utils for SCUM",
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
-	"main": "dist/main.js",
-	"homepage": "https://github.com/snowyyd/typescript-template#readme",
-	"repository": "https://github.com/snowyyd/typescript-template.git",
-	"bugs": "https://github.com/snowyyd/typescript-template/issues",
-	"author": "snowyyd <snowyyd@proton.me>",
+	"homepage": "https://github.com/scum-forge/dbhelper#readme",
+	"repository": "https://github.com/scum-forge/dbhelper.git",
+	"bugs": "https://github.com/scum-forge/dbhelper/issues",
 	"license": "MIT",
 	"scripts": {
 		"lint": "eslint src/ eslint.config.mjs",
 		"build": "tsc -p tsconfig.build.json",
-		"dev": "tsx src/main.ts",
-		"dev:node": "node src/main.ts"
+		"start": "bash scripts/start.sh",
+		"start:bun": "bun src/main.ts",
+		"start:node": "node src/main.ts",
+		"start:tsx": "tsx src/main.ts"
 	},
 	"devDependencies": {
 		"@snowyyd/eslint-config": "^2.2.2",
+		"@types/bun": "^1.2.18",
 		"@types/node": "^24.0.13",
 		"eslint": "^9.30.1",
+		"prisma": "^6.11.1",
 		"tsx": "^4.20.3",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.36.0"
-	}
+	},
+	"dependencies": {
+		"@commander-js/extra-typings": "^14.0.0",
+		"@prisma/client": "^6.11.1",
+		"commander": "^14.0.0",
+		"fast-xml-parser": "^5.2.5",
+		"neverthrow": "^8.2.0",
+		"winston": "^3.17.0"
+	},
+	"trustedDependencies": [
+		"@prisma/client",
+		"@prisma/engines",
+		"esbuild",
+		"prisma",
+		"unrs-resolver"
+	]
 }

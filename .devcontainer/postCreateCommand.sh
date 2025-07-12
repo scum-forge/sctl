@@ -5,3 +5,4 @@ nvm install --default node
 nvm reinstall-packages system
 npm update --global --force
 corepack install --global pnpm
+curl -fsSL https://bun.sh/install | bash

@@ -11,3 +11,9 @@ dist/
 
 # secrets
 .env
+
+# data
+/data
+
+# Prisma Client generated files
+/src/generated/prisma
