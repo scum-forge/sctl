@@ -1,10 +1,14 @@
-import { err, ok } from 'neverthrow';
+import { err, ok, Result } from 'neverthrow';
+
+// TODO: this basic implementation works, but a complete FProperty + FArchive deserializer would be great
+
+type ParsedResult = Record<string, number | bigint | (number | bigint)[]>;
 
 const MAGIC_KEY_PADDING = 0x05;
 const MAGIC_VALUE_PADDING = 0x0A;
 
 // https://docs.python.org/3/library/struct.html#format-characters
-type StructType = | '<d' | '<f' | '<?' | '<i' | '<B' | '<q' | '<h' | '<b' | '<Q' | '<I' | '<H';
+type StructType = '<d' | '<f' | '<?' | '<i' | '<B' | '<q' | '<h' | '<b' | '<Q' | '<I' | '<H';
 
 interface PropertyType
 {
@@ -30,43 +34,46 @@ const propertyTypes: Record<string, PropertyType> = {
 	UInt16Property: { width: 2, structType: '<H' },
 };
 
+const readFns: Record<StructType, (buf: Buffer, offset: number) => number | bigint> = {
+	'<d': (b, o) => b.readDoubleLE(o),
+	'<f': (b, o) => b.readFloatLE(o),
+	'<i': (b, o) => b.readInt32LE(o),
+	'<q': (b, o) => b.readBigInt64LE(o),
+	'<h': (b, o) => b.readInt16LE(o),
+	'<b': (b, o) => b.readInt8(o),
+	'<Q': (b, o) => b.readBigUInt64LE(o),
+	'<I': (b, o) => b.readUInt32LE(o),
+	'<H': (b, o) => b.readUInt16LE(o),
+	'<B': (b, o) => b.readUInt8(o),
+	'<?': (b, o) => b.readUInt8(o),
+};
+
+const writeFns: Record<StructType, (buf: Buffer, offset: number, value: number | bigint) => number> = {
+	'<d': (b, o, v) => b.writeDoubleLE(v as number, o),
+	'<f': (b, o, v) => b.writeFloatLE(v as number, o),
+	'<i': (b, o, v) => b.writeInt32LE(v as number, o),
+	'<q': (b, o, v) => b.writeBigInt64LE(BigInt(v), o),
+	'<h': (b, o, v) => b.writeInt16LE(v as number, o),
+	'<b': (b, o, v) => b.writeInt8(v as number, o),
+	'<Q': (b, o, v) => b.writeBigUInt64LE(BigInt(v), o),
+	'<I': (b, o, v) => b.writeUInt32LE(v as number, o),
+	'<H': (b, o, v) => b.writeUInt16LE(v as number, o),
+	'<B': (b, o, v) => b.writeUInt8(v as number, o),
+	'<?': (b, o, v) => b.writeUInt8(v as number, o),
+};
+
 function readStructValue(buffer: Buffer, offset: number, type: PropertyType)
 {
-	switch (type.structType)
-	{
-		case '<d': return ok(buffer.readDoubleLE(offset));
-		case '<f': return ok(buffer.readFloatLE(offset));
-		case '<i': return ok(buffer.readInt32LE(offset));
-		case '<q': return ok(buffer.readBigInt64LE(offset)); // bigint
-		case '<h': return ok(buffer.readInt16LE(offset));
-		case '<b': return ok(buffer.readInt8(offset));
-		case '<Q': return ok(buffer.readBigUInt64LE(offset)); // bigint
-		case '<I': return ok(buffer.readUInt32LE(offset));
-		case '<H': return ok(buffer.readUInt16LE(offset));
-		case '<B': return ok(buffer.readUInt8(offset));
-		case '<?': return ok(buffer.readUInt8(offset));
-		default: return err(`Unknown struct type: ${type.structType as PropertyType['structType']}`);
-	}
+	const fn = readFns[type.structType];
+	if (!fn) return err(`Unknown struct type: ${type.structType}`);
+	return ok(fn(buffer, offset));
 }
 
 function writeStructValue(buffer: Buffer, offset: number, value: number | bigint, type: PropertyType)
 {
-	switch (type.structType)
-	{
-		// TODO: "as number" is hacky
-		case '<d': return ok(buffer.writeDoubleLE(value as number, offset));
-		case '<f': return ok(buffer.writeFloatLE(value as number, offset));
-		case '<i': return ok(buffer.writeInt32LE(value as number, offset));
-		case '<q': return ok(buffer.writeBigInt64LE(BigInt(value), offset));
-		case '<h': return ok(buffer.writeInt16LE(value as number, offset));
-		case '<b': return ok(buffer.writeInt8(value as number, offset));
-		case '<Q': return ok(buffer.writeBigUInt64LE(BigInt(value), offset));
-		case '<I': return ok(buffer.writeUInt32LE(value as number, offset));
-		case '<H': return ok(buffer.writeUInt16LE(value as number, offset));
-		case '<B':
-		case '<?': return ok(buffer.writeUInt8(value as number, offset));
-		default: return err(`Unknown struct type: ${type.structType as PropertyType['structType']}`);
-	}
+	const fn = writeFns[type.structType];
+	if (!fn) return err(`Unknown struct type: ${type.structType}`);
+	return ok(fn(buffer, offset, value));
 }
 
 function readNullTerminatedString(buffer: Buffer, offset: number)
@@ -80,76 +87,111 @@ function readNullTerminatedString(buffer: Buffer, offset: number)
 	return buffer.toString('utf8', offset, end);
 }
 
-function getOffsets(blob: Buffer, key: string)
+function getAllOffsets(blob: Buffer, key: string)
 {
 	const keyBuffer = Buffer.from(key, 'utf8');
-	const keyOffset = blob.indexOf(keyBuffer);
-	if (keyOffset === -1) return null;
+	const results: {
+		typeName: string;
+		valueOffset: number;
+		propertyType: PropertyType;
+	}[] = [];
 
-	const typeOffset = keyOffset + key.length + MAGIC_KEY_PADDING;
-	const typeName = readNullTerminatedString(blob, typeOffset);
+	let searchOffset = 0;
 
-	const propertyType = propertyTypes[typeName];
-	if (!propertyType) return null;
+	while (searchOffset < blob.length)
+	{
+		const keyOffset = blob.indexOf(keyBuffer, searchOffset);
+		if (keyOffset === -1) break;
 
-	const valueOffset = typeOffset + typeName.length + MAGIC_VALUE_PADDING;
-	return { typeName, valueOffset, propertyType };
+		const typeOffset = keyOffset + key.length + MAGIC_KEY_PADDING;
+		const typeName = readNullTerminatedString(blob, typeOffset);
+		const propertyType = propertyTypes[typeName];
+
+		const valueOffset = typeOffset + typeName.length + MAGIC_VALUE_PADDING;
+
+		if (!propertyType)
+		{
+			searchOffset = valueOffset;
+			continue;
+		}
+
+		results.push({ typeName, valueOffset, propertyType });
+		searchOffset = valueOffset + propertyType.width;
+	}
+
+	return results;
 }
 
-export function parseBlob(blob: Buffer, keys: string[])
+export function parseBlob(blob: Buffer, keys: string[]): Result<{ result: ParsedResult; warnings: string[]; }, string>
 {
-	const result: Record<string, number | bigint> = {};
+	if (!Buffer.isBuffer(blob)) return err('Invalid blob input');
+	if (!Array.isArray(keys)) return err('Keys must be an array');
 
+	const result: ParsedResult = {};
 	const warnings: string[] = [];
 
 	for (const key of keys)
 	{
-		const offsetData = getOffsets(blob, key);
-		if (!offsetData)
+		const matches = getAllOffsets(blob, key);
+
+		if (matches.length === 0)
 		{
-			warnings.push(`Key or type not found or unsupported: ${key}`);
+			warnings.push(`No values found for key: "${key}"`);
 			continue;
 		}
 
-		const { valueOffset, propertyType } = offsetData;
+		const values: (number | bigint)[] = [];
 
-		try
+		for (const { valueOffset, propertyType, typeName } of matches)
 		{
 			const value = readStructValue(blob, valueOffset, propertyType);
-			if (value.isErr())
+			if (value.isOk())
 			{
-				warnings.push(value.error);
-				continue;
+				values.push(value.value);
 			}
+			else warnings.push(`Failed to read "${key}" of type "${typeName}" at offset ${valueOffset}: ${value.error}`);
+		}
 
-			result[key] = value.value;
-		}
-		catch (e)
-		{
-			return err(`Error reading value for key "${key}": ${(e as Error).message}`);
-		}
+		result[key] = values.length === 1 ? values[0]! : values;
 	}
 
 	return ok({ result, warnings });
 }
 
-/**
- *
- * @example
- * ```
- * const modifiedBlob = Buffer.from(originalBlob); // make a copy
- * updateBlob(modifiedBlob, 'BaseStrength', 6.5);
- * ```
- */
-export function updateBlob(blob: Buffer, key: string, newValue: number | bigint)
+export function updateBlob(blob: Buffer, key: string, newValue: number | bigint | (number | bigint)[])
 {
-	const offsetData = getOffsets(blob, key);
-	if (!offsetData) return err(`Cannot update: Key "${key}" or its type was not found.`);
+	const matches = getAllOffsets(blob, key);
 
-	const { valueOffset, propertyType } = offsetData;
+	if (matches.length === 0)
+	{
+		return err(`Cannot update: Key "${key}" not found.`);
+	}
 
-	const res = writeStructValue(blob, valueOffset, newValue, propertyType);
-	if (res.isErr()) return err(res.error);
+	if (Array.isArray(newValue))
+	{
+		if (newValue.length !== matches.length)
+		{
+			return err(`Array length mismatch for key "${key}". Expected ${matches.length}, got ${newValue.length}`);
+		}
+
+		for (let i = 0; i < matches.length; i++)
+		{
+			const { valueOffset, propertyType } = matches[i]!;
+			const res = writeStructValue(blob, valueOffset, newValue[i]!, propertyType);
+			if (res.isErr()) return err(`Error writing element ${i} of key "${key}": ${res.error}`);
+		}
+	}
+	else
+	{
+		if (matches.length > 1)
+		{
+			return err(`Multiple entries found for key "${key}", but a single value was provided.`);
+		}
+
+		const { valueOffset, propertyType } = matches[0]!;
+		const res = writeStructValue(blob, valueOffset, newValue, propertyType);
+		if (res.isErr()) return err(`Error writing key "${key}": ${res.error}`);
+	}
 
 	return ok(blob);
 }
