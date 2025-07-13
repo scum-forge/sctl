@@ -26,7 +26,7 @@ const keys = [
 	'PhoenixTearsAmount',
 ];
 
-async function getBodySimulation(id: string)
+export async function getBodySimulation(id: string, properties?: string[])
 {
 	const profile = await DatabaseManager.user_profile.findFirst({
 		where: {
@@ -44,7 +44,7 @@ async function getBodySimulation(id: string)
 
 	if (!profile?.prisoner_user_profile_prisoner_idToprisoner?.body_simulation) return err('Unable to find body simulation data for the specified ID.');
 
-	const parsed = parseBlob(Buffer.from(profile.prisoner_user_profile_prisoner_idToprisoner.body_simulation), keys);
+	const parsed = parseBlob(Buffer.from(profile.prisoner_user_profile_prisoner_idToprisoner.body_simulation), properties ?? keys);
 
 	if (parsed.isErr())
 	{
@@ -54,16 +54,28 @@ async function getBodySimulation(id: string)
 	return ok({
 		name: profile.name,
 		bodySimulation: parsed.value.result,
+		warnings: parsed.value.warnings,
 	});
 }
 
-export async function getBodySimulationWrapper(id: string)
+export async function getBodySimulationWrapper(id: string, properties?: string[])
 {
-	const ret = await getBodySimulation(id);
+	const ret = await getBodySimulation(id, properties);
 	if (ret.isOk())
 	{
-		Logger.info(`Body simulation data for ${ret.value.name}:`);
-		console.table(ret.value.bodySimulation);
+		const keysLen = Object.keys(ret.value.bodySimulation).length;
+		if (keysLen > 0)
+		{
+			Logger.info(`Body simulation data for ${ret.value.name}:`);
+			console.table(ret.value.bodySimulation);
+		}
+		else Logger.info('No body simulation data returned');
+
+		if (ret.value.warnings.length > 0)
+		{
+			Logger.warn('The execution resulted in one or more warnings');
+			ret.value.warnings.forEach((w) => Logger.warn(w));
+		}
 	}
 	else Logger.error(ret.error);
 }

@@ -4,7 +4,7 @@ import { Logger } from '../classes/log-manager.ts';
 
 type IdType = 'profile' | 'steam';
 
-async function getUserInfo(id: string, idType: IdType)
+export async function getUserInfo(id: string, idType: IdType)
 {
 	// safety check for NaN
 	if (idType === 'profile' && Number.isNaN(Number(id)))

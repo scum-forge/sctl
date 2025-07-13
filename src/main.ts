@@ -70,7 +70,8 @@ getCommand
 	.command('body-simulation')
 	.description('get a prisoner\'s body simulation data')
 	.argument('<id>', 'the steam id of the prisoner to query')
-	.action(async (id) => await mainWrapper(getBodySimulationWrapper, id));
+	.option('-p, --props <names...>', 'find custom properties by name')
+	.action(async (id, options) => await mainWrapper(getBodySimulationWrapper, id, options.props));
 
 getCommand
 	.command('user-info')

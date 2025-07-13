@@ -2,7 +2,7 @@ import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
 
-function getUserId(xml: string)
+export function getUserId(xml: string)
 {
 	/**
 	 * It would be better to parse the XML with an XML parser, but that
