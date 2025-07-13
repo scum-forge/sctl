@@ -8,7 +8,10 @@ const MAGIC_KEY_PADDING = 0x05;
 const MAGIC_VALUE_PADDING = 0x0A;
 
 // https://docs.python.org/3/library/struct.html#format-characters
-type StructType = '<d' | '<f' | '<?' | '<i' | '<B' | '<q' | '<h' | '<b' | '<Q' | '<I' | '<H';
+type StructFCharacter = 'd' | 'f' | '?' | 'i' | 'B' | 'q' | 'h' | 'b' | 'Q' | 'I' | 'H';
+type StructTypeLE = `<${StructFCharacter}`;
+// type StructTypeBE = `>${StructFCharacter}`;
+type StructType = StructTypeLE;
 
 interface PropertyType
 {
@@ -19,7 +22,6 @@ interface PropertyType
 // TODO: a python-like struct package would be good
 const propertyTypes: Record<string, PropertyType> = {
 	// https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Core/UObject/EName
-	// https://github.com/EpicGames/UnrealEngine/blob/release/Engine/Source/Runtime/Core/Public/UObject/UnrealNames.inl
 	ByteProperty: { width: 1, structType: '<B' },
 	IntProperty: { width: 4, structType: '<i' },
 	BoolProperty: { width: 1, structType: '<?' },
