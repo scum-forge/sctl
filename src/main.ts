@@ -1,15 +1,16 @@
 import { Command, Option, program } from '@commander-js/extra-typings';
+import pkgJson from '../package.json' with { type: 'json' };
 import { getBodySimulationWrapper } from './commands/body-simulation.ts';
 import { getUserInfoWrapper } from './commands/user-info.ts';
 import { getVehicleOwnerWrapper } from './commands/vehicle-owner.ts';
 import { actionWrapper, parseIntArg } from './utils/utils.ts';
 
 program
-	.name('dbhelper')
-	.description('database helper tools for SCUM')
+	.name('sctl')
+	.description('cli/api tools to help you manage a SCUM dedicated server')
 	.option('--db <path>', 'a custom path to the SCUM.db file (overrides DATABASE_URL)', process.env.DATABASE_URL)
-	.option('-v, --verbose', 'display extended logging information', ((dummy, previous) => previous + 1), 0)
-	.version('1.0.0');
+	.option('-v, --verbose', 'display extended logging information', ((_, previous) => previous + 1), 0)
+	.version(pkgJson.version);
 
 const getCommand = new Command('get')
 	.description('fetch info from the database');
