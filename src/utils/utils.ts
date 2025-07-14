@@ -1,8 +1,9 @@
 import { InvalidArgumentError, program } from '@commander-js/extra-typings';
+import i18next from 'i18next';
 import { join } from 'node:path';
+import type { Callback, RootOptions } from '../@types/types.ts';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
-import type { Callback, RootOptions } from './types.ts';
 
 export type ExtractedUserId = string | number;
 
@@ -14,23 +15,26 @@ export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, 
 	else if (rootOpts.verbose >= 2) Logger.level = 'trace';
 
 	Logger.debug(`DATABASE_URL: ${process.env.DATABASE_URL}`);
+	Logger.debug(`APP_LANG: ${process.env.APP_LANG}`);
+
+	// Logger.debug('Loading i18next...');
+	// await initI18n(process.env.APP_LANG);
 
 	if (rootOpts.db && rootOpts.db !== process.env.DATABASE_URL)
 	{
 		const newPath = `file:${join('..', rootOpts.db)}`;
-		Logger.debug(`Setting new DATABASE_URL env to ${newPath}`);
+		Logger.debug(i18next.t('debug.setDatabaseUrl', { newPath }));
 		process.env.DATABASE_URL = newPath;
 	}
 
 	try
 	{
-		Logger.debug('Connecting to the database...');
+		Logger.debug(i18next.t('debug.db.connecting'));
 		await DatabaseManager.init();
-		Logger.debug('Connected');
 
 		const t0 = performance.now();
 		await cb(...opts);
-		Logger.debug(`Command execution took ${(performance.now() - t0).toFixed(2)}ms`);
+		Logger.debug(i18next.t('debug.commandExecTime', { time: (performance.now() - t0).toFixed(2) }));
 	}
 	catch (e)
 	{
@@ -38,9 +42,8 @@ export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, 
 	}
 	finally
 	{
-		Logger.debug('Disconnecting from the database...');
+		Logger.debug(i18next.t('debug.db.disconnecting'));
 		await DatabaseManager.disconnect();
-		Logger.debug('Disconnected');
 	}
 }
 
@@ -65,7 +68,7 @@ export function extractUserId(input: string): ExtractedUserId | null
 export function parseIntArg(value: string)
 {
 	const parsed = parseInt(value, 10);
-	if (Number.isNaN(parsed)) throw new InvalidArgumentError('Not a number.');
+	if (Number.isNaN(parsed)) throw new InvalidArgumentError(i18next.t('errors.notANumber'));
 
 	return parsed;
 }
@@ -73,7 +76,7 @@ export function parseIntArg(value: string)
 export function parseUserId(value: string)
 {
 	const parsed = extractUserId(value);
-	if (parsed == null) throw new InvalidArgumentError('Invalid user id format.');
+	if (parsed == null) throw new InvalidArgumentError(i18next.t('errors.invalidUserIdFormat'));
 
 	return parsed;
 }

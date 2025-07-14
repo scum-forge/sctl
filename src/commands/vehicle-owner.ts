@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
@@ -7,11 +8,13 @@ export function getUserId(xml: string)
 	const match = /_owningUserProfileId="(\d+)"/.exec(xml);
 	if (!match)
 	{
-		throw new Error('Could not find _owningUserProfileId in the XML.');
+		return err(i18next.t('commands.vehicle-owner.profileIdNotFound'));
 	}
 
 	const ret = Number(match[1]);
-	return Number.isNaN(ret) ? 0 : ret;
+	return !Number.isNaN(ret)
+		? ok(ret)
+		: err(i18next.t('commands.vehicle-owner.profileIdNotValid'));
 }
 
 async function getVehicleOwner(vehicleId: number)
@@ -30,24 +33,28 @@ async function getVehicleOwner(vehicleId: number)
 
 	if (!xml)
 	{
-		return err(`No XML data found for vehicle #${vehicleId}.`);
+		return err(i18next.t('commands.vehicle-owner.noXML', { vehicleId }));
 	}
 
 	const userId = getUserId(xml);
-
-	if (userId === 0)
+	if (userId.isErr())
 	{
-		return err(`Vehicle #${vehicleId} has no owner.`);
+		return err(userId.error);
+	}
+
+	if (userId.value === 0)
+	{
+		return err(i18next.t('commands.vehicle-owner.noOwner', { vehicleId }));
 	}
 
 	const user = await DatabaseManager.user_profile.findUnique({
-		where: { id: userId },
+		where: { id: userId.value },
 		select: { id: true, user_id: true, name: true },
 	});
 
 	if (!user)
 	{
-		return err(`Owner with userProfileId ${userId} not found in user_profile table.`);
+		return err(i18next.t('commands.vehicle-owner.ownerNotFound', { userId: userId.value }));
 	}
 
 	return ok(user);
@@ -58,7 +65,7 @@ export async function getVehicleOwnerCommand(vehicleId: number)
 	const ret = await getVehicleOwner(vehicleId);
 	if (ret.isOk())
 	{
-		Logger.info(`Vehicle #${vehicleId} - Owner Information:`);
+		Logger.info(i18next.t('commands.vehicle-owner.ok', { vehicleId }));
 		console.table(ret.value);
 	}
 	else Logger.error(ret.error);

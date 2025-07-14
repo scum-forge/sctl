@@ -15,5 +15,5 @@ dist/
 # data
 /data
 
-# Prisma Client generated files
-/src/generated/prisma
+# generated files
+/src/generated/

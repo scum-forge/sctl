@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
@@ -14,7 +15,7 @@ async function getAllUserVehicles(id: ExtractedUserId)
 
 	if (!profile)
 	{
-		return err('User not found');
+		return err(i18next.t('errors.userNotFound'));
 	}
 
 	const ownedEntities = await DatabaseManager.item_entity.findMany({
@@ -39,7 +40,7 @@ async function getAllUserVehicles(id: ExtractedUserId)
 
 	if (ownedEntities.length === 0)
 	{
-		return err('User has no owned vehicles');
+		return err(i18next.t('commands.vehicles.noOwnedVehicles'));
 	}
 
 	const vehicles = ownedEntities.map((e) => ({
@@ -59,7 +60,7 @@ export async function getAllUserVehiclesCommand(id: ExtractedUserId)
 	const ret = await getAllUserVehicles(id);
 	if (ret.isOk())
 	{
-		Logger.info(`User ${ret.value.name} owns ${ret.value.vehicles.length} vehicles:`);
+		Logger.info(i18next.t('commands.vehicles.ok', { name: ret.value.name, count: ret.value.vehicles.length }));
 		console.table(ret.value.vehicles);
 	}
 	else Logger.error(ret.error);

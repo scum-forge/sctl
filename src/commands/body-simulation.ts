@@ -1,9 +1,10 @@
 import { program } from '@commander-js/extra-typings';
+import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
+import type { RootOptions } from '../@types/types.ts';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
 import { parseBlob } from '../utils/blob-parser.ts';
-import type { RootOptions } from '../utils/types.ts';
 import type { ExtractedUserId } from '../utils/utils.ts';
 
 // Class ConZ.PrisonerBodySimulationSave
@@ -42,8 +43,8 @@ export async function getBodySimulation(id: ExtractedUserId, properties?: string
 		},
 	});
 
-	if (!profile) return err('User not found');
-	if (!profile.prisoner_user_profile_prisoner_idToprisoner?.body_simulation) return err('Unable to find body simulation data for the specified ID.');
+	if (!profile) return err(i18next.t('errors.userNotFound'));
+	if (!profile.prisoner_user_profile_prisoner_idToprisoner?.body_simulation) return err(i18next.t('commands.body-simulation.notFound', { userId: id }));
 
 	const parsed = parseBlob(Buffer.from(profile.prisoner_user_profile_prisoner_idToprisoner.body_simulation), properties ?? keys);
 
@@ -67,14 +68,14 @@ export async function getBodySimulationCommand(id: ExtractedUserId, properties?:
 		const keysLen = Object.keys(ret.value.bodySimulation).length;
 		if (keysLen > 0)
 		{
-			Logger.info(`Body simulation data for ${ret.value.name}:`);
+			Logger.info(i18next.t('commands.body-simulation.ok', { user: ret.value.name }));
 			console.table(ret.value.bodySimulation);
 		}
-		else Logger.info('No body simulation data returned');
+		else Logger.info(i18next.t('commands.body-simulation.noLen'));
 
 		if (ret.value.warnings.length > 0 && (properties !== undefined || (program.opts() as RootOptions).verbose > 0))
 		{
-			Logger.warn('The execution resulted in one or more warnings');
+			Logger.warn(i18next.t('errors.oneOrMoreWarnings'));
 			ret.value.warnings.forEach((w) => Logger.warn(w));
 		}
 	}

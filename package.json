@@ -10,6 +10,8 @@
 	"license": "MIT",
 	"scripts": {
 		"lint": "eslint src/ --ignore-pattern 'src/generated/**' eslint.config.mjs",
+		"gen-types": "bun scripts/gen-types.ts",
+		"prepare": "bun gen-types",
 		"build": "tsc -p tsconfig.build.json",
 		"start": "bash scripts/start.sh",
 		"start:bun": "bun src/main.ts",
@@ -24,13 +26,16 @@
 		"prisma": "^6.11.1",
 		"tsx": "^4.20.3",
 		"typescript": "^5.8.3",
-		"typescript-eslint": "^8.36.0"
+		"typescript-eslint": "^8.36.0",
+		"yaml": "^2.8.0"
 	},
 	"dependencies": {
 		"@commander-js/extra-typings": "^14.0.0",
 		"@prisma/client": "^6.11.1",
 		"commander": "^14.0.0",
 		"fast-xml-parser": "^5.2.5",
+		"i18next": "^25.3.2",
+		"i18next-fs-backend": "^2.6.0",
 		"neverthrow": "^8.2.0",
 		"winston": "^3.17.0"
 	},

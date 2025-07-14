@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
@@ -32,7 +33,7 @@ export async function getUserInfo(id: ExtractedUserId)
 		},
 	});
 
-	if (!profile) return err('User not found');
+	if (!profile) return err(i18next.t('errors.userNotFound'));
 
 	const elevated = profile.user_id != null
 		? await DatabaseManager.elevated_users.findUnique({ where: { user_id: profile.user_id } })
@@ -68,7 +69,7 @@ export async function getUserInfoCommand(id: ExtractedUserId)
 	const ret = await getUserInfo(id);
 	if (ret.isOk())
 	{
-		Logger.info('User info:');
+		Logger.info(i18next.t('commands.user-info.ok'));
 		console.table(ret.value);
 	}
 	else Logger.error(ret.error);

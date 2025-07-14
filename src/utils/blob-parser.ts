@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { err, ok, Result } from 'neverthrow';
 
 // TODO: this basic implementation works, but a complete FProperty + FArchive deserializer would be great
@@ -67,14 +68,14 @@ const writeFns: Record<StructType, (buf: Buffer, offset: number, value: number |
 function readStructValue(buffer: Buffer, offset: number, type: PropertyType)
 {
 	const fn = readFns[type.structType];
-	if (!fn) return err(`Unknown struct type: ${type.structType}`);
+	if (!fn) return err(i18next.t('blob-parser.unknownStruct', { name: type.structType }));
 	return ok(fn(buffer, offset));
 }
 
 function writeStructValue(buffer: Buffer, offset: number, value: number | bigint, type: PropertyType)
 {
 	const fn = writeFns[type.structType];
-	if (!fn) return err(`Unknown struct type: ${type.structType}`);
+	if (!fn) return err(i18next.t('blob-parser.unknownStruct', { name: type.structType }));
 	return ok(fn(buffer, offset, value));
 }
 
@@ -126,8 +127,8 @@ function getAllOffsets(blob: Buffer, key: string)
 
 export function parseBlob(blob: Buffer, keys: string[]): Result<{ result: ParsedResult; warnings: string[]; }, string>
 {
-	if (!Buffer.isBuffer(blob)) return err('Invalid blob input');
-	if (!Array.isArray(keys)) return err('Keys must be an array');
+	if (!Buffer.isBuffer(blob)) return err(i18next.t('blob-parser.parse.invalidBuffer'));
+	if (!Array.isArray(keys)) return err(i18next.t('blob-parser.parse.invalidArray'));
 
 	const result: ParsedResult = {};
 	const warnings: string[] = [];
@@ -138,7 +139,7 @@ export function parseBlob(blob: Buffer, keys: string[]): Result<{ result: Parsed
 
 		if (matches.length === 0)
 		{
-			warnings.push(`No values found for key: "${key}"`);
+			warnings.push(i18next.t('blob-parser.parse.noLen', { key }));
 			continue;
 		}
 
@@ -151,7 +152,12 @@ export function parseBlob(blob: Buffer, keys: string[]): Result<{ result: Parsed
 			{
 				values.push(value.value);
 			}
-			else warnings.push(`Failed to read "${key}" of type "${typeName}" at offset ${valueOffset}: ${value.error}`);
+			else
+			{
+				warnings.push(i18next.t('blob-parser.parse.errRead', {
+					key, typeName, valueOffset, error: value.error,
+				}));
+			}
 		}
 
 		result[key] = values.length === 1 ? values[0]! : values;
@@ -166,33 +172,33 @@ export function updateBlob(blob: Buffer, key: string, newValue: number | bigint 
 
 	if (matches.length === 0)
 	{
-		return err(`Cannot update: Key "${key}" not found.`);
+		return err(i18next.t('blob-parser.update.noLen', { key }));
 	}
 
 	if (Array.isArray(newValue))
 	{
 		if (newValue.length !== matches.length)
 		{
-			return err(`Array length mismatch for key "${key}". Expected ${matches.length}, got ${newValue.length}`);
+			return err(i18next.t('blob-parser.update.mismatchLen', { key, len: matches.length, newLen: newValue.length }));
 		}
 
 		for (let i = 0; i < matches.length; i++)
 		{
 			const { valueOffset, propertyType } = matches[i]!;
 			const res = writeStructValue(blob, valueOffset, newValue[i]!, propertyType);
-			if (res.isErr()) return err(`Error writing element ${i} of key "${key}": ${res.error}`);
+			if (res.isErr()) return err(i18next.t('blob-parser.update.errWriteMulti', { i, key, error: res.error }));
 		}
 	}
 	else
 	{
 		if (matches.length > 1)
 		{
-			return err(`Multiple entries found for key "${key}", but a single value was provided.`);
+			return err(i18next.t('blob-parser.update.multiEntries', { key }));
 		}
 
 		const { valueOffset, propertyType } = matches[0]!;
 		const res = writeStructValue(blob, valueOffset, newValue, propertyType);
-		if (res.isErr()) return err(`Error writing key "${key}": ${res.error}`);
+		if (res.isErr()) return err(i18next.t('blob-parser.update.errWriteSingle', { key, error: res.error }));
 	}
 
 	return ok(blob);

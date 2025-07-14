@@ -1,0 +1,83 @@
+errors:
+  userNotFound: User not found
+  oneOrMoreWarnings: The execution resulted in one or more warnings
+  notANumber: Not a number
+  invalidUserIdFormat: Invalid user id format
+
+debug:
+  db:
+    connecting: Connecting to the database...
+    disconnecting: Disconnecting from the database...
+  commandExecTime: Command execution took {{time}}ms
+  setDatabaseUrl: Setting new DATABASE_URL env to {{newPath}}
+
+blob-parser:
+  unknownStruct: 'Unknown struct type: {{name}}'
+  parse:
+    invalidBuffer: Invalid blob input
+    invalidArray: Invalid keys input
+    noLen: 'No values found for key: {{key}}'
+    errRead: 'Failed to read key {{key}} of type {{typeName}} at offset {{valueOffset}}: {{error}}'
+  update:
+    noLen: 'Cannot update key {{key}}: Not found'
+    mismatchLen: Array length mismatch for key {{key}}. Expected {{len}}, got {{newLen}}
+    errWriteMulti: 'Error writing element {{i}} of key {{key}}: {{error}}'
+    multiEntries: Multiple entries found for key {{key}}, but single value was provided
+    errWriteSingle: 'Error writing key {{key}}: {{error}}'
+
+commands:
+  body-simulation:
+    notFound: 'Unable to find body simulation data for user #{{userId}}'
+    ok: 'Body simulation data for {{user}}:'
+    noLen: No body simulation data returned
+
+  user-info:
+    ok: 'Requested user info:'
+
+  vehicle-owner:
+    profileIdNotFound: Could not find _owningUserProfileId
+    profileIdNotValid: Returned profile id not valid
+    noXML: 'No XML data found for vehicle #{{vehicleId}}'
+    noOwner: 'Vehicle #{{vehicleId}} has no owner'
+    ownerNotFound: 'Owner with profile id #{{userId}} not found in `user_profile` table'
+    ok: 'Vehicle #{{vehicleId}} - Owner information:'
+
+  vehicles:
+    noOwnedVehicles: User has no owned vehicles
+    ok: 'User {{name}} owns {{count}} vehicles:'
+
+program:
+  description: cli/api tools to help you manage a SCUM dedicated server
+  options:
+    db: custom path to the SCUM.db file (overrides DATABASE_URL)
+    verbose: display extended logging information
+
+  commands:
+    get:
+      description: fetch info from the database
+      idHelp: |-
+
+        Note:
+          "id" expects the following format: prefix:id
+            - steam prefix: steam, sid, s (e.g. sid:123)
+            - profile prefix: profile, uid, p (e.g. pid:123)
+            - no prefix: fallback to steamid (e.g. 123)
+
+      commands:
+        vehicle-owner:
+          description: get information about the owner of a vehicle
+          vehicleId: the id of vehicle to query
+
+        vehicles:
+          description: get all vehicles owned by a user
+          id: id of the user to query
+
+        body-simulation:
+          description: get a prisoner's body simulation data
+          id: id of the user to query
+          props: find custom properties by name
+
+        user-info:
+          description: get relevant user info
+          id: id of the user to query
+          
