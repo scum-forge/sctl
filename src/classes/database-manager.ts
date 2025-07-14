@@ -55,7 +55,7 @@ class CDatabaseManager extends PrismaClient
 		return this.user_profile.findFirst({
 			...args,
 			where: { user_id: id },
-			orderBy: { id: 'asc' },
+			orderBy: { id: 'desc' },
 		});
 	}
 }
