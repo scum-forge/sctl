@@ -1,6 +1,5 @@
 import type { LeveledLogMethod, LoggerOptions, Logger as WinstonLogger } from 'winston';
-import { createLogger, format, transports } from 'winston';
-import { addColors } from 'winston/lib/winston/config';
+import { addColors, createLogger, format, transports } from 'winston';
 
 export const logsFolder = 'logs';
 
