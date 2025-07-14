@@ -6,7 +6,10 @@ import type { ExtractedUserId } from '../utils/utils.ts';
 async function getAllUserVehicles(id: ExtractedUserId)
 {
 	const profile = await DatabaseManager.findProfile(id, {
-		select: { id: true },
+		select: {
+			id: true,
+			name: true,
+		},
 	});
 
 	if (!profile)
@@ -39,13 +42,16 @@ async function getAllUserVehicles(id: ExtractedUserId)
 		return err('User has no owned vehicles');
 	}
 
-	const res = ownedEntities.map((e) => ({
+	const vehicles = ownedEntities.map((e) => ({
 		vehicleId: e.entity.owning_entity_id,
 		class: e.entity.class.replace('_Item_Container_ES', ''),
 		// containerId: e.entity_id,
 	}));
 
-	return ok(res);
+	return ok({
+		name: profile.name,
+		vehicles,
+	});
 }
 
 export async function getAllUserVehiclesCommand(id: ExtractedUserId)
@@ -53,7 +59,8 @@ export async function getAllUserVehiclesCommand(id: ExtractedUserId)
 	const ret = await getAllUserVehicles(id);
 	if (ret.isOk())
 	{
-		console.table(ret.value);
+		Logger.info(`User ${ret.value.name} owns ${ret.value.vehicles.length} vehicles:`);
+		console.table(ret.value.vehicles);
 	}
 	else Logger.error(ret.error);
 }
