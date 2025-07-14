@@ -1,19 +1,11 @@
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
+import type { ExtractedUserId } from '../utils/utils.ts';
 
-type IdType = 'profile' | 'steam';
-
-export async function getUserInfo(id: string, idType: IdType)
+export async function getUserInfo(id: ExtractedUserId)
 {
-	// safety check for NaN
-	if (idType === 'profile' && Number.isNaN(Number(id)))
-	{
-		return err('User not found');
-	}
-
-	const profile = await DatabaseManager.user_profile.findFirst({
-		where: idType === 'profile' ? { id: Number(id) } : { user_id: id },
+	const profile = await DatabaseManager.findProfile(id, {
 		select: {
 			id: true,
 			user_id: true,
@@ -71,9 +63,9 @@ export async function getUserInfo(id: string, idType: IdType)
 	});
 }
 
-export async function getUserInfoWrapper(id: string, idType: IdType)
+export async function getUserInfoCommand(id: ExtractedUserId)
 {
-	const ret = await getUserInfo(id, idType);
+	const ret = await getUserInfo(id);
 	if (ret.isOk())
 	{
 		Logger.info('User info:');

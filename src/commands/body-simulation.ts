@@ -1,10 +1,13 @@
+import { program } from '@commander-js/extra-typings';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
 import { parseBlob } from '../utils/blob-parser.ts';
+import type { RootOptions } from '../utils/types.ts';
+import type { ExtractedUserId } from '../utils/utils.ts';
 
 // Class ConZ.PrisonerBodySimulationSave
-const keys = [
+export const keys = [
 	'IsDead',
 	'BaseStrength',
 	'BaseConstitution',
@@ -26,12 +29,9 @@ const keys = [
 	'PhoenixTearsAmount',
 ];
 
-export async function getBodySimulation(id: string, properties?: string[])
+export async function getBodySimulation(id: ExtractedUserId, properties?: string[])
 {
-	const profile = await DatabaseManager.user_profile.findFirst({
-		where: {
-			user_id: id,
-		},
+	const profile = await DatabaseManager.findProfile(id, {
 		select: {
 			name: true,
 			prisoner_user_profile_prisoner_idToprisoner: {
@@ -42,7 +42,8 @@ export async function getBodySimulation(id: string, properties?: string[])
 		},
 	});
 
-	if (!profile?.prisoner_user_profile_prisoner_idToprisoner?.body_simulation) return err('Unable to find body simulation data for the specified ID.');
+	if (!profile) return err('User not found');
+	if (!profile.prisoner_user_profile_prisoner_idToprisoner?.body_simulation) return err('Unable to find body simulation data for the specified ID.');
 
 	const parsed = parseBlob(Buffer.from(profile.prisoner_user_profile_prisoner_idToprisoner.body_simulation), properties ?? keys);
 
@@ -58,7 +59,7 @@ export async function getBodySimulation(id: string, properties?: string[])
 	});
 }
 
-export async function getBodySimulationWrapper(id: string, properties?: string[])
+export async function getBodySimulationCommand(id: ExtractedUserId, properties?: string[])
 {
 	const ret = await getBodySimulation(id, properties);
 	if (ret.isOk())
@@ -71,7 +72,7 @@ export async function getBodySimulationWrapper(id: string, properties?: string[]
 		}
 		else Logger.info('No body simulation data returned');
 
-		if (ret.value.warnings.length > 0)
+		if (ret.value.warnings.length > 0 && (properties !== undefined || (program.opts() as RootOptions).verbose > 0))
 		{
 			Logger.warn('The execution resulted in one or more warnings');
 			ret.value.warnings.forEach((w) => Logger.warn(w));

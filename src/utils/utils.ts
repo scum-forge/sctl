@@ -4,13 +4,7 @@ import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
 import type { Callback, RootOptions } from './types.ts';
 
-export function parseIntArg(value: string)
-{
-	const parsed = parseInt(value, 10);
-	if (Number.isNaN(parsed)) throw new InvalidArgumentError('Not a number.');
-
-	return parsed;
-}
+export type ExtractedUserId = string | number;
 
 export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, ...opts: T)
 {
@@ -34,7 +28,9 @@ export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, 
 		await DatabaseManager.init();
 		Logger.debug('Connected');
 
+		const t0 = performance.now();
 		await cb(...opts);
+		Logger.debug(`Command execution took ${(performance.now() - t0).toFixed(2)}ms`);
 	}
 	catch (e)
 	{
@@ -46,4 +42,38 @@ export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, 
 		await DatabaseManager.disconnect();
 		Logger.debug('Disconnected');
 	}
+}
+
+export function extractUserId(input: string): ExtractedUserId | null
+{
+	const steamRegex = /^(?:(?:steam|sid|s):)?(\d+)$/i;
+	const profileRegex = /^(?:(?:profile|uid|p):)?(\d+)$/i;
+
+	const steamMatch = steamRegex.exec(input);
+	if (steamMatch) return steamMatch[1] ?? null;
+
+	const profileMatch = profileRegex.exec(input);
+	if (profileMatch)
+	{
+		const numb = Number(profileMatch[1]);
+		return !Number.isNaN(numb) ? numb : null;
+	}
+
+	return null;
+}
+
+export function parseIntArg(value: string)
+{
+	const parsed = parseInt(value, 10);
+	if (Number.isNaN(parsed)) throw new InvalidArgumentError('Not a number.');
+
+	return parsed;
+}
+
+export function parseUserId(value: string)
+{
+	const parsed = extractUserId(value);
+	if (parsed == null) throw new InvalidArgumentError('Invalid user id format.');
+
+	return parsed;
 }
