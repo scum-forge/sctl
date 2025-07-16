@@ -6,6 +6,8 @@ A CLI/API exposing the SCUM database in a human friendly way.
 - 👉 **Human friendly** — designed for humans (easy access to server resources)
 - 🚀 **Exposed API** — integrate with your existing tool (e.g. a bot, web interface, etc.)
 - 🤝 **Compatibility** — designed with Node.js and Bun support in mind
+- 🔍 **Access to hard-to-reach data** — makes it simple to query and interact with parts of the database that are complex to retrieve
+- 🛠️ **Extra resources** — includes several non-database useful features like in-game time config calculations and other gameplay-related settings
 
 ## 🚀 Usage guide
 
