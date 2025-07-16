@@ -46,6 +46,15 @@ commands:
     noOwnedVehicles: User has no owned vehicles
     ok: 'User {{name}} owns {{count}} vehicles:'
 
+  time:
+    invalidTimeStr: 'Invalid input (expected format: HH:MM:SS)'
+    errSunriseSec: 'Failed to calculate sunrise seconds: {{error}}'
+    errSunsetSec: 'Failed to calculate sunset seconds: {{error}}'
+    okFirst: 'If the sun rises at {{sunrise}} and sets at {{sunset}} with a {{speed}}x speed, then:'
+    okSecond: '{{cycle}}hs in-game = {{hours}}hs real life'
+    okThird: 'Real-life time > Day: {{day}}hs ({{dayP}}%) | Night: {{night}}hs ({{nightP}}%)'
+    okFourth: 'In-game time > Day: {{day}}hs | Night: {{night}}hs'
+
 program:
   description: cli/api tools to help you manage a SCUM dedicated server
   options:
@@ -53,6 +62,12 @@ program:
     verbose: display extended logging information
 
   commands:
+    time:
+      description: calculate day/night time cycle
+      sunrise: time (in hh:mm:ss) at which the sun rises
+      sunset: tim (in hh:mm:ss) at which the sun sets
+      speed: speed at which the time of day changes
+
     get:
       description: fetch info from the database
       idHelp: |-

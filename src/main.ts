@@ -2,11 +2,12 @@ import { Command, program } from '@commander-js/extra-typings';
 import i18next from 'i18next';
 import pkgJson from '../package.json' with { type: 'json' };
 import { getBodySimulationCommand } from './commands/body-simulation.ts';
+import { calculateTimeCommand, defaultOptions as timeOpts } from './commands/time.ts';
 import { getUserInfoCommand } from './commands/user-info.ts';
 import { getVehicleOwnerCommand } from './commands/vehicle-owner.ts';
 import { getAllUserVehiclesCommand } from './commands/vehicles.ts';
 import { initI18n } from './utils/i18next.ts';
-import { actionWrapper, parseIntArg, parseUserId } from './utils/utils.ts';
+import { actionWrapper, parseFloatArg, parseIntArg, parseUserId } from './utils/utils.ts';
 
 await initI18n(process.env.APP_LANG);
 
@@ -16,6 +17,19 @@ program
 	.option('--db <path>', i18next.t('program.options.db'), process.env.DATABASE_URL)
 	.option('-v, --verbose', i18next.t('program.options.verbose'), ((_, previous) => previous + 1), 0)
 	.version(pkgJson.version);
+
+program.addCommand(
+	new Command('time')
+		.description(i18next.t('program.commands.time.description'))
+		.argument('<sunrise>', i18next.t('program.commands.time.sunrise'))
+		.argument('<sunset>', i18next.t('program.commands.time.sunset'))
+		.argument('[speed]', i18next.t('program.commands.time.speed'), parseFloatArg, timeOpts.timeSpeed)
+		.action((sunrise, sunset, speed) => actionWrapper(calculateTimeCommand, {
+			sunriseTime: sunrise,
+			sunsetTime: sunset,
+			timeSpeed: speed,
+		}))
+);
 
 const idHelp = i18next.t('program.commands.get.idHelp');
 

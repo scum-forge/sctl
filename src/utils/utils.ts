@@ -7,6 +7,11 @@ import { Logger } from '../classes/log-manager.ts';
 
 export type ExtractedUserId = string | number;
 
+export function formatFloat(num: number, maximumFractionDigits = 2)
+{
+	return num.toLocaleString('en', { maximumFractionDigits });
+}
+
 export async function actionWrapper<T extends unknown[], V>(cb: Callback<T, V>, ...opts: T)
 {
 	const rootOpts = program.opts() as RootOptions;
@@ -68,6 +73,14 @@ export function extractUserId(input: string): ExtractedUserId | null
 export function parseIntArg(value: string)
 {
 	const parsed = parseInt(value, 10);
+	if (Number.isNaN(parsed)) throw new InvalidArgumentError(i18next.t('errors.notANumber'));
+
+	return parsed;
+}
+
+export function parseFloatArg(value: string)
+{
+	const parsed = parseFloat(value);
 	if (Number.isNaN(parsed)) throw new InvalidArgumentError(i18next.t('errors.notANumber'));
 
 	return parsed;
