@@ -11,7 +11,7 @@ export async function initI18n(language = 'en-US')
 			fallbackLng: 'en-US',
 			defaultNS: 'translation',
 			backend: {
-				loadPath: join(import.meta.dir, '..', '..', 'locales/{{lng}}.yml'),
+				loadPath: join(import.meta.dirname, '..', '..', 'locales/{{lng}}.yml'),
 			},
 			interpolation: {
 				escapeValue: false,
