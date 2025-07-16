@@ -1,7 +1,9 @@
+import { Command } from '@commander-js/extra-typings';
 import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
+import { actionWrapper, parseIntArg } from '../utils/utils.ts';
 
 export function getUserId(xml: string)
 {
@@ -60,13 +62,17 @@ async function getVehicleOwner(vehicleId: number)
 	return ok(user);
 }
 
-export async function getVehicleOwnerCommand(vehicleId: number)
-{
-	const ret = await getVehicleOwner(vehicleId);
-	if (ret.isOk())
+export const getVehicleOwnerCommand = () => new Command()
+	.name('vehicle-owner')
+	.description(i18next.t('program.commands.get.commands.vehicle-owner.description'))
+	.argument('<vehicleId>', i18next.t('program.commands.get.commands.vehicle-owner.vehicleId'), parseIntArg)
+	.action(async (vehicleId) => await actionWrapper(async () =>
 	{
-		Logger.info(i18next.t('commands.vehicle-owner.ok', { vehicleId }));
-		console.table(ret.value);
-	}
-	else Logger.error(ret.error);
-}
+		const ret = await getVehicleOwner(vehicleId);
+		if (ret.isOk())
+		{
+			Logger.info(i18next.t('commands.vehicle-owner.ok', { vehicleId }));
+			console.table(ret.value);
+		}
+		else Logger.error(ret.error);
+	}));

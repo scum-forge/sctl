@@ -1,8 +1,9 @@
+import { Command } from '@commander-js/extra-typings';
 import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
-import type { ExtractedUserId } from '../utils/utils.ts';
+import { actionWrapper, parseUserId, type ExtractedUserId } from '../utils/utils.ts';
 
 async function getAllUserVehicles(id: ExtractedUserId)
 {
@@ -55,13 +56,18 @@ async function getAllUserVehicles(id: ExtractedUserId)
 	});
 }
 
-export async function getAllUserVehiclesCommand(id: ExtractedUserId)
-{
-	const ret = await getAllUserVehicles(id);
-	if (ret.isOk())
+export const getAllUserVehiclesCommand = () => new Command()
+	.name('vehicles')
+	.description(i18next.t('program.commands.get.commands.vehicles.description'))
+	.addHelpText('after', i18next.t('program.commands.get.idHelp'))
+	.argument('<id>', i18next.t('program.commands.get.commands.vehicles.id'), parseUserId)
+	.action(async (id) => await actionWrapper(async () =>
 	{
-		Logger.info(i18next.t('commands.vehicles.ok', { name: ret.value.name, count: ret.value.vehicles.length }));
-		console.table(ret.value.vehicles);
-	}
-	else Logger.error(ret.error);
-}
+		const ret = await getAllUserVehicles(id);
+		if (ret.isOk())
+		{
+			Logger.info(i18next.t('commands.vehicles.ok', { name: ret.value.name, count: ret.value.vehicles.length }));
+			console.table(ret.value.vehicles);
+		}
+		else Logger.error(ret.error);
+	}));

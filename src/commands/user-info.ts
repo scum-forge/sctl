@@ -1,8 +1,9 @@
+import { Command } from '@commander-js/extra-typings';
 import i18next from 'i18next';
 import { err, ok } from 'neverthrow';
 import { DatabaseManager } from '../classes/database-manager.ts';
 import { Logger } from '../classes/log-manager.ts';
-import type { ExtractedUserId } from '../utils/utils.ts';
+import { actionWrapper, parseUserId, type ExtractedUserId } from '../utils/utils.ts';
 
 export async function getUserInfo(id: ExtractedUserId)
 {
@@ -64,13 +65,18 @@ export async function getUserInfo(id: ExtractedUserId)
 	});
 }
 
-export async function getUserInfoCommand(id: ExtractedUserId)
-{
-	const ret = await getUserInfo(id);
-	if (ret.isOk())
+export const getUserInfoCommand = () => new Command()
+	.name('user-info')
+	.description(i18next.t('program.commands.get.commands.user-info.description'))
+	.addHelpText('after', i18next.t('program.commands.get.idHelp'))
+	.argument('<id>', i18next.t('program.commands.get.commands.user-info.id'), parseUserId)
+	.action(async (id) => await actionWrapper(async () =>
 	{
-		Logger.info(i18next.t('commands.user-info.ok'));
-		console.table(ret.value);
-	}
-	else Logger.error(ret.error);
-}
+		const ret = await getUserInfo(id);
+		if (ret.isOk())
+		{
+			Logger.info(i18next.t('commands.user-info.ok'));
+			console.table(ret.value);
+		}
+		else Logger.error(ret.error);
+	}));
